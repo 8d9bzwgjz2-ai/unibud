@@ -15,6 +15,12 @@ import {
 
 const execFileAsync = promisify(execFile);
 const WRAPPER = join(projectRoot(), "scripts/with-app-env.mjs");
+function withoutAuthFlag() {
+  const env = { ...process.env };
+  delete env.VITE_AUTH_ENABLED;
+  return env;
+}
+
 const PRINT_FLAG = "process.stdout.write(String(process.env.VITE_AUTH_ENABLED));";
 
 function makeWorkspace(appEnvJson) {
@@ -59,8 +65,9 @@ test("an explicit process-env override wins over the file", () => {
   assert.equal(merged.PATH, "/usr/bin");
 });
 
-test("the template ships auth off", () => {
-  assert.deepEqual(readAppEnv(projectRoot()), { VITE_AUTH_ENABLED: "false" });
+test("UNIBUD ships no VITE_ app-env, so sign-in stays on by default", () => {
+  // .grok/app-env.json only carries deploy settings; non-VITE_ keys are dropped.
+  assert.deepEqual(readAppEnv(projectRoot()), {});
 });
 
 test("vite loadEnv resolves the wrapped value", () => {
@@ -74,13 +81,13 @@ test("vite loadEnv resolves the wrapped value", () => {
 });
 
 test("the wrapped command runs with the app env applied", async () => {
-  const { stdout } = await execFileAsync(process.execPath, [
-    WRAPPER,
+  const { stdout } = await execFileAsync(
     process.execPath,
-    "-e",
-    PRINT_FLAG,
-  ]);
-  assert.equal(stdout, "false");
+    [WRAPPER, process.execPath, "-e", PRINT_FLAG],
+    { env: withoutAuthFlag() },
+  );
+  // The shipped app-env defines no VITE_AUTH_ENABLED, so nothing is injected.
+  assert.equal(stdout, "undefined");
 });
 
 test("the wrapped command sees an explicit override, not the file value", async () => {
@@ -118,11 +125,11 @@ test("the CLI still runs when invoked through a symlinked path", async () => {
   // turns the wrapper into a no-op that exits 0 without starting anything.
   const link = join(mkdtempSync(join(tmpdir(), "app-env-link-")), "scripts");
   symlinkSync(join(projectRoot(), "scripts"), link);
-  const { stdout } = await execFileAsync(process.execPath, [
-    join(link, "with-app-env.mjs"),
+  const { stdout } = await execFileAsync(
     process.execPath,
-    "-e",
-    PRINT_FLAG,
-  ]);
-  assert.equal(stdout, "false");
+    [join(link, "with-app-env.mjs"), process.execPath, "-e", PRINT_FLAG],
+    { env: withoutAuthFlag() },
+  );
+  // A no-op wrapper prints nothing; a running one reports the unset flag.
+  assert.equal(stdout, "undefined");
 });

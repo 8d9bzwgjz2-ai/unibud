@@ -19,7 +19,6 @@ export { rightsForOriginal, rightsForTrack } from "./rights";
 export { UnibudMusic } from "./service";
 export {
   RightsManagement,
-  SEED_ORIGINAL_AUDIO,
   originalFromPublish,
   searchAudio,
   type AudioReport,

@@ -56,10 +56,12 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
   assert.deepEqual(pendingMigrations(["auth", "README.md"], []), []);
 });
 
-test("the auth schema ships outside the globbed directory", () => {
+test("UNIBUD applies every top-level migration in order, auth schema first", () => {
   const migrationsDir = join(projectRoot(), "migrations");
-  assert.deepEqual(pendingMigrations(readdirSync(migrationsDir), []), []);
-  assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
+  const names = pendingMigrations(readdirSync(migrationsDir), []).map((m) => m.name);
+  assert.equal(names[0], "0001_auth.sql");
+  assert.deepEqual(names, [...names].sort());
+  assert.ok(names.length > 1);
 });
 
 test("this workspace's auth schema copy is byte-identical to its source", () => {

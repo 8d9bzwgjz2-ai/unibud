@@ -75,6 +75,14 @@ function Board() {
         </Link>
       ) : null}
 
+      {sessions.length === 0 ? (
+        <div className="mt-6 rounded-2xl bg-card p-5 ring-1 ring-border">
+          <p className="font-medium">No class sessions yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sessions appear here when a lecturer schedules a real class for a course you are enrolled in.
+          </p>
+        </div>
+      ) : null}
       <ul className="mt-6 space-y-3">
         {sessions.map((s) => {
           const present = liveAttendance[s.id] === "present";

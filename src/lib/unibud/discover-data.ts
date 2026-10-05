@@ -53,33 +53,8 @@ export const GLOBAL_FACTS = [
   },
 ] as const;
 
-export const CHALLENGES: Challenge[] = [
-  {
-    id: "ch-build",
-    title: "48-hour build",
-    body: "Ship one thing that works offline. Screenshot it. No pitch deck.",
-    topic: "tech",
-    joins: 1840,
-  },
-  {
-    id: "ch-sky",
-    title: "Look up",
-    body: "Photograph the moon or a clear sky from wherever you are. Caption the place, not the flex.",
-    topic: "space",
-    joins: 920,
-  },
-  {
-    id: "ch-sound",
-    title: "One song, no lyrics",
-    body: "Drop an instrumental that gets you through the last hour of work.",
-    topic: "music",
-    joins: 2104,
-  },
-];
+/** Reality First: challenges need a real backend; none is connected. */
+export const CHALLENGES: Challenge[] = [];
 
-export const GLOBAL_CLIPS: GlobalClip[] = [
-  { id: "cl1", title: "Robot arm, first successful grab", interest: "tech", src: "/market/camera.jpg", authorHandle: "aisha_nbo" },
-  { id: "cl2", title: "Moon, cheap lens, honest sky", interest: "space", src: "/covers/campus-night.jpg", authorHandle: "jonas_wits" },
-  { id: "cl3", title: "Faculty night recap", interest: "nightlife", src: "/covers/campus-night.jpg", authorHandle: "kemi" },
-  { id: "cl4", title: "Five-a-side, last light", interest: "football", src: "/market/keke.jpg", authorHandle: "ibrahim" },
-];
+/** Reality First: no clip provider is connected. */
+export const GLOBAL_CLIPS: GlobalClip[] = [];

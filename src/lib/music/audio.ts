@@ -94,31 +94,3 @@ export function searchAudio(q: string, originals: UnibudAudio[], licensed: Unibu
   return [...licensed.filter(match).map(hit), ...originals.filter((a) => a.status !== "removed" && match(a)).map(hit)];
 }
 
-export const SEED_ORIGINAL_AUDIO: UnibudAudio[] = [
-  {
-    audioId: "oa-adaeze-morning",
-    sourceType: "ORIGINAL_AUDIO",
-    title: "Campus morning voiceover",
-    creatorHandle: "adaeze",
-    sourceContentId: "p1",
-    durationMs: 8400,
-    usageCount: 1,
-    usedBy: ["p1"],
-    createdAt: "2026-08-20T07:12:00.000Z",
-    status: "active",
-    claimedOriginal: true,
-  },
-  {
-    audioId: "oa-tunde-gate",
-    sourceType: "ORIGINAL_AUDIO",
-    title: "Second gate at 8am",
-    creatorHandle: "tunde",
-    sourceContentId: "p2",
-    durationMs: 11200,
-    usageCount: 1,
-    usedBy: ["p2"],
-    createdAt: "2026-08-21T08:04:00.000Z",
-    status: "active",
-    claimedOriginal: true,
-  },
-];

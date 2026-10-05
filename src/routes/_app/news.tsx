@@ -17,7 +17,7 @@ function News() {
       <p className="kicker">Academic information</p>
       <h1 className="mt-1 font-display text-4xl">Educational News</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Official-feeling campus and academic notices. This is not the Square feed.
+        Campus and academic notices from official sources. This is not the Square feed.
       </p>
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {CATS.map((c) => (
@@ -34,6 +34,14 @@ function News() {
           </button>
         ))}
       </div>
+      {items.length === 0 ? (
+        <div className="mt-6 rounded-2xl bg-card p-5 ring-1 ring-border">
+          <p className="font-medium">Current news is unavailable</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            No news source is connected to UNIBUD yet, so there is nothing real to show. Nothing here is invented.
+          </p>
+        </div>
+      ) : null}
       <ul className="mt-5 space-y-3">
         {items.map((n) => (
           <li key={n.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">

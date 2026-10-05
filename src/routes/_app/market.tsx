@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,14 @@ export const Route = createFileRoute("/_app/market")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     cat: typeof s.cat === "string" ? (s.cat as Search["cat"]) : "all",
   }),
-  component: Market,
+  component: MarketLayout,
 });
+
+function MarketLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/market" && pathname !== "/market/") return <Outlet />;
+  return <Market />;
+}
 
 function Market() {
   const { cat = "all" } = Route.useSearch();

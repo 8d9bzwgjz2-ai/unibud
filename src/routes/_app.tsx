@@ -1,13 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getCampusCatalog } from "@/lib/unibud/server";
+import { registerDirectory } from "@/lib/unibud/catalog";
 import { AppShell } from "@/components/shell/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_app")({
   loader: () => getCampusCatalog(),
-  component: AppShell,
+  component: AppLayout,
   pendingComponent: Pending,
 });
+
+function AppLayout() {
+  // Hydrate the in-memory directory with the real registered accounts (never invented people).
+  registerDirectory(Route.useLoaderData().people);
+  return <AppShell />;
+}
 
 function Pending() {
   return (

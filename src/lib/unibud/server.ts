@@ -21,7 +21,28 @@ export const getCampusCatalog = createServerFn({ method: "GET" }).handler(
     await ensureCatalogSeed();
     const sql = await getSql();
     const universities = (await sql`select * from universities order by name`).map(mapUni);
-    const people = (await sql`select * from directory_people order by name`).map(mapPerson);
+    // Reality First: people are real registered accounts only.
+    const people = (
+      await sql<{
+        handle: string;
+        display_name: string;
+        university_id: string;
+        program: string;
+        year: string;
+        bio: string;
+      }>`select handle, display_name, university_id, program, year, bio from student_profiles
+        where onboarding_done = true order by display_name`
+    ).map((r) =>
+      mapPerson({
+        handle: r.handle,
+        name: r.display_name,
+        university_id: r.university_id,
+        program: r.program,
+        year: r.year,
+        bio: r.bio,
+        verified: false,
+      }),
+    );
     const listings = (
       await sql`select * from listings order by created_at desc`
     ).map(mapListing);
@@ -52,8 +73,25 @@ export const getListing = createServerFn({ method: "GET" })
     const rows = await sql`select * from listings where id = ${id} limit 1`;
     const listing = rows[0] ? mapListing(rows[0]) : null;
     if (!listing) return null;
-    const sellerRows = await sql`select * from directory_people where handle = ${listing.sellerHandle} limit 1`;
-    const seller = sellerRows[0] ? mapPerson(sellerRows[0]) : null;
+    const sellerRows = await sql<{
+      handle: string;
+      display_name: string;
+      university_id: string;
+      program: string;
+      year: string;
+      bio: string;
+    }>`select handle, display_name, university_id, program, year, bio from student_profiles where handle = ${listing.sellerHandle} limit 1`;
+    const seller = sellerRows[0]
+      ? mapPerson({
+          handle: sellerRows[0].handle,
+          name: sellerRows[0].display_name,
+          university_id: sellerRows[0].university_id,
+          program: sellerRows[0].program,
+          year: sellerRows[0].year,
+          bio: sellerRows[0].bio,
+          verified: false,
+        })
+      : null;
     const related = (
       await sql`select * from listings where category = ${listing.category} and id <> ${id} order by saved_count desc limit 4`
     ).map(mapListing);
@@ -71,8 +109,26 @@ export const searchCampus = createServerFn({ method: "GET" })
       await sql`select * from listings where lower(title) like ${like} or lower(description) like ${like} or lower(category) like ${like} limit 12`
     ).map(mapListing);
     const people = (
-      await sql`select * from directory_people where lower(name) like ${like} or lower(handle) like ${like} limit 8`
-    ).map(mapPerson);
+      await sql<{
+        handle: string;
+        display_name: string;
+        university_id: string;
+        program: string;
+        year: string;
+        bio: string;
+      }>`select handle, display_name, university_id, program, year, bio from student_profiles
+        where lower(display_name) like ${like} or lower(handle) like ${like} limit 8`
+    ).map((r) =>
+      mapPerson({
+        handle: r.handle,
+        name: r.display_name,
+        university_id: r.university_id,
+        program: r.program,
+        year: r.year,
+        bio: r.bio,
+        verified: false,
+      }),
+    );
     const communities = (
       await sql`select * from communities where lower(name) like ${like} or lower(description) like ${like} limit 8`
     ).map(mapCommunity);

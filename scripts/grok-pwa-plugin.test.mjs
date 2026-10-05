@@ -21,6 +21,10 @@ import { renderInstallPage } from "./grok-pwa-plugin.mjs";
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+// Hermetic: tests that call the injector without an explicit cwd must not read
+// this app's real src/lib/og/site.json (UNIBUD branding), only template defaults.
+process.chdir(mkdtempSync(join(tmpdir(), "grok-pwa-test-cwd-")));
+
 test("injects before </head>", () => {
   const out = injectGrokPwaHead("<html><head><title>x</title></head><body></body></html>");
   assert.match(out, /rel="manifest"/);

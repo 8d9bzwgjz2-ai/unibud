@@ -8,6 +8,7 @@ import { PEOPLE, personByHandle } from "@/lib/unibud/catalog";
 import { relativeTime } from "@/lib/unibud/format";
 import { listConversations, openConversation } from "@/lib/social/server";
 import { CAMPUS_ROOMS, type RoomKind } from "@/lib/unibud/chat-rooms";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/messages")({ component: ChatList });
@@ -38,8 +39,12 @@ function ChatList() {
   }
 
   async function start(handle: string) {
-    const c = await openConversation({ data: { handle } });
-    nav({ to: "/messages/$id", params: { id: c.id } });
+    try {
+      const c = await openConversation({ data: { handle } });
+      nav({ to: "/messages/$id", params: { id: c.id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not start this chat.");
+    }
   }
 
   const rooms = CAMPUS_ROOMS.filter((r) => (tab === "direct" ? false : r.kind === tab));
@@ -105,7 +110,10 @@ function ChatList() {
           {!convos.data?.length ? (
             <EmptyState title="No threads yet" body="Message someone from Connect, or start a chat below." />
           ) : null}
-          <h2 className="mt-8 text-sm font-medium">Suggested</h2>
+          <h2 className="mt-8 text-sm font-medium">Registered students</h2>
+          {PEOPLE.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">No other registered students yet.</p>
+          ) : null}
           <ul className="mt-2">
             {PEOPLE.filter((p) => p.role !== "lecturer").slice(0, 6).map((p) => (
               <li key={p.handle}>

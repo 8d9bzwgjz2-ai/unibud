@@ -90,7 +90,7 @@ export function AudioSheet({ onClose, embedded }: { onClose?: () => void; embedd
     void el.play().catch(() => {});
   }
 
-  function useIt(a: UnibudAudio) {
+  function applyAudio(a: UnibudAudio) {
     const rights = rightsForOriginal(a, "PEAK");
     if (!rights.useAudio) return;
     attach(a);
@@ -161,7 +161,7 @@ export function AudioSheet({ onClose, embedded }: { onClose?: () => void; embedd
                 <Heart className={cn("size-4", saved && "fill-paper")} />
               </button>
               {canUse ? (
-                <button type="button" className="h-9 rounded-full bg-paper px-3 text-xs font-semibold text-ink" onClick={() => useIt(a)}>
+                <button type="button" className="h-9 rounded-full bg-paper px-3 text-xs font-semibold text-ink" onClick={() => applyAudio(a)}>
                   Use
                 </button>
               ) : a.listenUrl ? (

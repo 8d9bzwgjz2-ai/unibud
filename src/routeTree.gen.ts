@@ -45,11 +45,8 @@ import { Route as AppAudioIdRouteImport } from './routes/_app/audio.$id'
 import { Route as AppBoardIdRouteImport } from './routes/_app/board.$id'
 import { Route as AppBudCommunitiesRouteImport } from './routes/_app/bud.communities'
 import { Route as AppBudFixerRouteImport } from './routes/_app/bud.fixer'
-import { Route as AppCommunitiesCommunityIdRouteImport } from './routes/_app/communities/$communityId'
 import { Route as AppCommunitiesIdRouteImport } from './routes/_app/communities.$id'
-import { Route as AppMarketIndexRouteImport } from './routes/_app/market/index'
 import { Route as AppMarketIdRouteImport } from './routes/_app/market.$id'
-import { Route as AppMarketListingIdRouteImport } from './routes/_app/market/$listingId'
 import { Route as AppMessagesIdRouteImport } from './routes/_app/messages.$id'
 import { Route as AppRiffIdRouteImport } from './routes/_app/riff.$id'
 import { Route as AppSpillIdRouteImport } from './routes/_app/spill.$id'
@@ -236,30 +233,14 @@ const AppBudFixerRoute = AppBudFixerRouteImport.update({
   path: '/fixer',
   getParentRoute: () => AppBudRoute,
 } as any)
-const AppCommunitiesCommunityIdRoute =
-  AppCommunitiesCommunityIdRouteImport.update({
-    id: '/$communityId',
-    path: '/$communityId',
-    getParentRoute: () => AppCommunitiesRoute,
-  } as any)
 const AppCommunitiesIdRoute = AppCommunitiesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppCommunitiesRoute,
 } as any)
-const AppMarketIndexRoute = AppMarketIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppMarketRoute,
-} as any)
 const AppMarketIdRoute = AppMarketIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => AppMarketRoute,
-} as any)
-const AppMarketListingIdRoute = AppMarketListingIdRouteImport.update({
-  id: '/$listingId',
-  path: '/$listingId',
   getParentRoute: () => AppMarketRoute,
 } as any)
 const AppMessagesIdRoute = AppMessagesIdRouteImport.update({
@@ -329,17 +310,14 @@ export interface FileRoutesByFullPath {
   '/board/$id': typeof AppBoardIdRoute
   '/bud/communities': typeof AppBudCommunitiesRoute
   '/bud/fixer': typeof AppBudFixerRoute
-  '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
   '/market/$id': typeof AppMarketIdRoute
-  '/market/$listingId': typeof AppMarketListingIdRoute
   '/messages/$id': typeof AppMessagesIdRoute
   '/riff/$id': typeof AppRiffIdRoute
   '/spill/$id': typeof AppSpillIdRoute
   '/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
-  '/market/': typeof AppMarketIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -353,6 +331,7 @@ export interface FileRoutesByTo {
   '/fixer': typeof AppFixerRoute
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
+  '/market': typeof AppMarketRouteWithChildren
   '/messages': typeof AppMessagesRouteWithChildren
   '/money': typeof AppMoneyRoute
   '/news': typeof AppNewsRoute
@@ -376,17 +355,14 @@ export interface FileRoutesByTo {
   '/board/$id': typeof AppBoardIdRoute
   '/bud/communities': typeof AppBudCommunitiesRoute
   '/bud/fixer': typeof AppBudFixerRoute
-  '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
   '/market/$id': typeof AppMarketIdRoute
-  '/market/$listingId': typeof AppMarketListingIdRoute
   '/messages/$id': typeof AppMessagesIdRoute
   '/riff/$id': typeof AppRiffIdRoute
   '/spill/$id': typeof AppSpillIdRoute
   '/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
-  '/market': typeof AppMarketIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -426,17 +402,14 @@ export interface FileRoutesById {
   '/_app/board/$id': typeof AppBoardIdRoute
   '/_app/bud/communities': typeof AppBudCommunitiesRoute
   '/_app/bud/fixer': typeof AppBudFixerRoute
-  '/_app/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/_app/communities/$id': typeof AppCommunitiesIdRoute
   '/_app/market/$id': typeof AppMarketIdRoute
-  '/_app/market/$listingId': typeof AppMarketListingIdRoute
   '/_app/messages/$id': typeof AppMessagesIdRoute
   '/_app/riff/$id': typeof AppRiffIdRoute
   '/_app/spill/$id': typeof AppSpillIdRoute
   '/_app/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
-  '/_app/market/': typeof AppMarketIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -476,17 +449,14 @@ export interface FileRouteTypes {
     | '/board/$id'
     | '/bud/communities'
     | '/bud/fixer'
-    | '/communities/$communityId'
     | '/communities/$id'
     | '/market/$id'
-    | '/market/$listingId'
     | '/messages/$id'
     | '/riff/$id'
     | '/spill/$id'
     | '/u/$handle'
     | '/api/auth/$'
     | '/api/media/$id'
-    | '/market/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -500,6 +470,7 @@ export interface FileRouteTypes {
     | '/fixer'
     | '/help'
     | '/live'
+    | '/market'
     | '/messages'
     | '/money'
     | '/news'
@@ -523,17 +494,14 @@ export interface FileRouteTypes {
     | '/board/$id'
     | '/bud/communities'
     | '/bud/fixer'
-    | '/communities/$communityId'
     | '/communities/$id'
     | '/market/$id'
-    | '/market/$listingId'
     | '/messages/$id'
     | '/riff/$id'
     | '/spill/$id'
     | '/u/$handle'
     | '/api/auth/$'
     | '/api/media/$id'
-    | '/market'
   id:
     | '__root__'
     | '/_app'
@@ -572,17 +540,14 @@ export interface FileRouteTypes {
     | '/_app/board/$id'
     | '/_app/bud/communities'
     | '/_app/bud/fixer'
-    | '/_app/communities/$communityId'
     | '/_app/communities/$id'
     | '/_app/market/$id'
-    | '/_app/market/$listingId'
     | '/_app/messages/$id'
     | '/_app/riff/$id'
     | '/_app/spill/$id'
     | '/_app/u/$handle'
     | '/api/auth/$'
     | '/api/media/$id'
-    | '/_app/market/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -846,13 +811,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBudFixerRouteImport
       parentRoute: typeof AppBudRoute
     }
-    '/_app/communities/$communityId': {
-      id: '/_app/communities/$communityId'
-      path: '/$communityId'
-      fullPath: '/communities/$communityId'
-      preLoaderRoute: typeof AppCommunitiesCommunityIdRouteImport
-      parentRoute: typeof AppCommunitiesRoute
-    }
     '/_app/communities/$id': {
       id: '/_app/communities/$id'
       path: '/$id'
@@ -860,25 +818,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCommunitiesIdRouteImport
       parentRoute: typeof AppCommunitiesRoute
     }
-    '/_app/market/': {
-      id: '/_app/market/'
-      path: '/'
-      fullPath: '/market/'
-      preLoaderRoute: typeof AppMarketIndexRouteImport
-      parentRoute: typeof AppMarketRoute
-    }
     '/_app/market/$id': {
       id: '/_app/market/$id'
       path: '/$id'
       fullPath: '/market/$id'
       preLoaderRoute: typeof AppMarketIdRouteImport
-      parentRoute: typeof AppMarketRoute
-    }
-    '/_app/market/$listingId': {
-      id: '/_app/market/$listingId'
-      path: '/$listingId'
-      fullPath: '/market/$listingId'
-      preLoaderRoute: typeof AppMarketListingIdRouteImport
       parentRoute: typeof AppMarketRoute
     }
     '/_app/messages/$id': {
@@ -952,12 +896,10 @@ const AppBudRouteWithChildren =
   AppBudRoute._addFileChildren(AppBudRouteChildren)
 
 interface AppCommunitiesRouteChildren {
-  AppCommunitiesCommunityIdRoute: typeof AppCommunitiesCommunityIdRoute
   AppCommunitiesIdRoute: typeof AppCommunitiesIdRoute
 }
 
 const AppCommunitiesRouteChildren: AppCommunitiesRouteChildren = {
-  AppCommunitiesCommunityIdRoute: AppCommunitiesCommunityIdRoute,
   AppCommunitiesIdRoute: AppCommunitiesIdRoute,
 }
 
@@ -967,14 +909,10 @@ const AppCommunitiesRouteWithChildren = AppCommunitiesRoute._addFileChildren(
 
 interface AppMarketRouteChildren {
   AppMarketIdRoute: typeof AppMarketIdRoute
-  AppMarketListingIdRoute: typeof AppMarketListingIdRoute
-  AppMarketIndexRoute: typeof AppMarketIndexRoute
 }
 
 const AppMarketRouteChildren: AppMarketRouteChildren = {
   AppMarketIdRoute: AppMarketIdRoute,
-  AppMarketListingIdRoute: AppMarketListingIdRoute,
-  AppMarketIndexRoute: AppMarketIndexRoute,
 }
 
 const AppMarketRouteWithChildren = AppMarketRoute._addFileChildren(

@@ -54,7 +54,7 @@ function SellForm() {
       });
       await router.invalidate();
       toast.success("Listed");
-      await router.navigate({ to: "/market/$listingId", params: { listingId: listing.id } });
+      await router.navigate({ to: "/market/$id", params: { id: listing.id } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not list");
     } finally {

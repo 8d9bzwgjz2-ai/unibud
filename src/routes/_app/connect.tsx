@@ -119,8 +119,6 @@ function Connect() {
 
       {tab === "discover" ? (
         <div className="mt-5 grid gap-3">
-          <Lane title="Builders far from you" handles={["aisha_nbo", "chinedu", "adaeze"]} />
-          <Lane title="Sky, games, language" handles={["jonas_wits", "yuki_lang", "ibrahim"]} />
           <Lane title="Creators" handles={PEOPLE.filter((p) => p.tags?.includes("creator")).map((p) => p.handle)} />
         </div>
       ) : null}
@@ -174,7 +172,11 @@ function Connect() {
         })}
       </ul>
       {shown.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">Nobody in this list yet.</p>
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          {tab === "discover" || tab === "all"
+            ? "No other students have joined yet. People appear here when real accounts sign up."
+            : "Nobody in this list yet."}
+        </p>
       ) : null}
     </main>
   );

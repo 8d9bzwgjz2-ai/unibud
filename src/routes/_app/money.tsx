@@ -209,6 +209,7 @@ function AddSheet({ onClose, onDone }: { onClose: () => void; onDone: () => void
 
 function SendSheet({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [handle, setHandle] = useState(PEOPLE[0]?.handle ?? "");
+  const noPeople = PEOPLE.length === 0;
   const [amount, setAmount] = useState("2000");
   const [note, setNote] = useState("");
   const mut = useMutation({
@@ -232,6 +233,7 @@ function SendSheet({ onClose, onDone }: { onClose: () => void; onDone: () => voi
         value={handle}
         onChange={(e) => setHandle(e.target.value)}
       >
+        {noPeople ? <option value="">No registered students yet</option> : null}
         {PEOPLE.map((p) => (
           <option key={p.handle} value={p.handle}>
             {p.name} (@{p.handle})
@@ -240,7 +242,7 @@ function SendSheet({ onClose, onDone }: { onClose: () => void; onDone: () => voi
       </select>
       <Input className="mt-3" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount in naira" />
       <Input className="mt-2" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note" />
-      <Button className="mt-4 w-full" onClick={() => mut.mutate()} disabled={mut.isPending}>
+      <Button className="mt-4 w-full" onClick={() => mut.mutate()} disabled={mut.isPending || noPeople || !handle}>
         Record demo send
       </Button>
     </Sheet>
@@ -329,7 +331,7 @@ function RequestsPane({
 }
 
 function RequestSheet({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [selected, setSelected] = useState<string[]>([PEOPLE[1]?.handle ?? "tunde"]);
+  const [selected, setSelected] = useState<string[]>([]);
   const [amount, setAmount] = useState("5000");
   const [note, setNote] = useState("Roommate share");
   const [split, setSplit] = useState(false);
@@ -348,6 +350,9 @@ function RequestSheet({ onClose, onDone }: { onClose: () => void; onDone: () => 
   });
   return (
     <Sheet title="Request money" onClose={onClose}>
+      {PEOPLE.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No registered students to request from yet.</p>
+      ) : null}
       <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
         {PEOPLE.map((p) => (
           <label key={p.handle} className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm hover:bg-secondary">
