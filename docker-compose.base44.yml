@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16
+    restart: on-failure
+    environment:
+      POSTGRES_USER: unibud
+      POSTGRES_PASSWORD: unibud_dev_local
+      POSTGRES_DB: unibud
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unibud -d unibud"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    image: node:22
+    restart: on-failure
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "3000:8080"
+    env_file:
+      - /run/base44/app.env
+    environment:
+      - DATABASE_URL=postgres://unibud:unibud_dev_local@db:5432/unibud
+      - VITE_AUTH_ENABLED=true
+      - BETTER_AUTH_URL=https://3000-${BASE44_PUBLIC_HOST_SUFFIX}
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+      - CHOKIDAR_USEPOLLING=true
+    command: ["sh", "-ec", "npm install --no-audit --no-fund && node scripts/migrate.mjs && exec npm run dev"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -o /dev/null --max-time 5 http://127.0.0.1:8080/ || (echo 'app not responding'; exit 1)"]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+      start_period: 180s
+
+volumes:
+  pgdata:
+  node_modules:
