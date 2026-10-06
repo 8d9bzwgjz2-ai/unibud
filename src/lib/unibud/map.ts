@@ -13,6 +13,8 @@ import type {
   ListingCategory,
   ListingKind,
   MoneyRequest,
+  QuadAnnouncement,
+  QuadGroup,
   RequestStatus,
   StudentProfile,
   StudyMaterial,
@@ -103,6 +105,8 @@ export function mapCommunity(r: {
   description: string;
   cover: string | null;
   members: number;
+  created_by?: string | null;
+  created_at?: string | Date;
 }): Community {
   return {
     id: r.id,
@@ -110,6 +114,8 @@ export function mapCommunity(r: {
     kind: r.kind,
     universityId: r.university_id ?? undefined,
     description: r.description,
+    createdBy: r.created_by ?? undefined,
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : undefined,
     cover: r.cover ?? undefined,
     members: r.members,
   };
@@ -123,6 +129,7 @@ export function mapPost(r: {
   image: string | null;
   video?: string | null;
   kind?: string | null;
+  group_id?: string | null;
   created_at: string;
 }): FeedPost {
   return {
@@ -133,6 +140,39 @@ export function mapPost(r: {
     image: r.image ?? undefined,
     video: r.video ?? undefined,
     kind: r.kind === "reel" ? "reel" : "post",
+    createdAt: r.created_at,
+    groupId: r.group_id ?? undefined,
+  };
+}
+
+export function mapQuadGroup(r: {
+  id: string;
+  quad_id: string;
+  name: string;
+  description: string;
+  created_at: string;
+}): QuadGroup {
+  return {
+    id: r.id,
+    quadId: r.quad_id,
+    name: r.name,
+    description: r.description,
+    createdAt: r.created_at,
+  };
+}
+
+export function mapQuadAnnouncement(r: {
+  id: string;
+  quad_id: string;
+  author_handle: string;
+  body: string;
+  created_at: string;
+}): QuadAnnouncement {
+  return {
+    id: r.id,
+    quadId: r.quad_id,
+    authorHandle: r.author_handle,
+    body: r.body,
     createdAt: r.created_at,
   };
 }

@@ -11,6 +11,8 @@ import {
   mapPost,
   mapPostReply,
   mapProfile,
+  mapQuadAnnouncement,
+  mapQuadGroup,
   mapUni,
 } from "./map";
 import type { ListingCategory, ListingKind, StudentProfile } from "./types";
@@ -61,7 +63,31 @@ export const getCampusCatalog = createServerFn({ method: "GET" }).handler(
     } catch {
       replies = [];
     }
-    return { universities, people, listings, communities, posts, discovery, replies };
+    // Quad groups and announcements — real rows only.
+    let quadGroups: ReturnType<typeof mapQuadGroup>[] = [];
+    let quadAnnouncements: ReturnType<typeof mapQuadAnnouncement>[] = [];
+    try {
+      quadGroups = (await sql`select * from quad_groups order by created_at asc`).map((r) =>
+        mapQuadGroup(r as Parameters<typeof mapQuadGroup>[0]),
+      );
+      quadAnnouncements = (
+        await sql`select * from quad_announcements order by created_at desc limit 100`
+      ).map((r) => mapQuadAnnouncement(r as Parameters<typeof mapQuadAnnouncement>[0]));
+    } catch {
+      quadGroups = [];
+      quadAnnouncements = [];
+    }
+    return {
+      universities,
+      people,
+      listings,
+      communities,
+      posts,
+      discovery,
+      replies,
+      quadGroups,
+      quadAnnouncements,
+    };
   },
 );
 

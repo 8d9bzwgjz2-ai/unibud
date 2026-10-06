@@ -80,6 +80,25 @@ export type Community = {
   description: string;
   cover?: string;
   members: number;
+  createdBy?: string;
+  createdAt?: string;
+};
+
+/** A focused area inside a Quad — never the definition of the Quad itself. */
+export type QuadGroup = {
+  id: string;
+  quadId: string;
+  name: string;
+  description: string;
+  createdAt: string;
+};
+
+export type QuadAnnouncement = {
+  id: string;
+  quadId: string;
+  authorHandle: string;
+  body: string;
+  createdAt: string;
 };
 
 export type FeedPost = {
@@ -92,6 +111,7 @@ export type FeedPost = {
   kind?: "post" | "reel";
   createdAt: string;
   audioId?: string;
+  groupId?: string;
 };
 
 export type DiscoveryItem = {

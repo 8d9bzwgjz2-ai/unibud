@@ -3,10 +3,12 @@ import { Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { COMMUNITIES } from "@/lib/unibud/catalog";
 import { useCatalog } from "@/lib/unibud/queries";
 import { myCommunities } from "@/lib/social/server";
-import { useQuery } from "@tanstack/react-query";
+import { createQuad, QUAD_TYPES, type QuadType } from "@/lib/unibud/quad.server";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { canGovernClass } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
@@ -15,6 +17,10 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/communities")({ component: Communities });
+
+/** Structural campus kinds that exist alongside the open-ended Quad types. */
+const STRUCTURAL_KINDS = ["University", "Faculty", "Residence"] as const;
+const KIND_FILTERS = ["all", ...STRUCTURAL_KINDS, ...QUAD_TYPES] as const;
 
 function Communities() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -26,6 +32,7 @@ function Communities() {
 
 function CommunitiesList() {
   const { data } = useCatalog();
+  const qc = useQueryClient();
   const catalogRooms = data?.communities ?? [];
   const allRooms = [
     ...COMMUNITIES.filter((c) => !catalogRooms.some((x) => x.id === c.id)),
@@ -34,15 +41,29 @@ function CommunitiesList() {
   const { user } = useAuthReady();
   const role = useCampusStore((s) => s.role ?? "student");
   const [tab, setTab] = useState<"discover" | "mine">("discover");
-  const [kind, setKind] = useState<"all" | "Class" | "Study" | "University" | "Faculty" | "Interest">("all");
+  const [kind, setKind] = useState<(typeof KIND_FILTERS)[number]>("all");
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
-  const [createKind, setCreateKind] = useState<"Study" | "Interest" | "Class">("Study");
+  const [description, setDescription] = useState("");
+  const [createKind, setCreateKind] = useState<QuadType>("Interest");
   const mine = useQuery({
     queryKey: ["my-communities"],
     queryFn: () => myCommunities(),
     enabled: Boolean(user),
+  });
+  const createMut = useMutation({
+    mutationFn: (input: { name: string; kind: string; description: string }) =>
+      createQuad({ data: input }),
+    onSuccess: () => {
+      setName("");
+      setDescription("");
+      setCreating(false);
+      void qc.invalidateQueries({ queryKey: ["catalog"] });
+      void qc.invalidateQueries({ queryKey: ["my-communities"] });
+      toast.success("Quad created. It's live for anyone to find.");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
   const communities = allRooms.filter(
     (c) =>
@@ -51,16 +72,16 @@ function CommunitiesList() {
       c.description.toLowerCase().includes(q.toLowerCase()),
   );
   const shown = (tab === "mine" ? communities.filter((c) => mine.data?.includes(c.id)) : communities).filter(
-    (c) => kind === "all" || c.kind === kind || (kind === "Interest" && ["Interest", "Music", "Sports", "Career"].includes(c.kind)),
+    (c) => kind === "all" || c.kind === kind,
   );
 
   return (
     <main className="safe-bottom px-5 pt-6">
       <p className="kicker">Find your people</p>
-      <h1 className="mt-1 font-display text-4xl">Communities</h1>
+      <h1 className="mt-1 font-display text-4xl">Quad</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Structured shared spaces. Class groups are academic cohorts. Study groups are student-run.
-        Chat lives in Chat — a community is not a thread.
+        App-like community environments — around an interest, a creator, an activity, an experience.
+        A Quad can hold people, groups, conversations and content.
       </p>
       <div className="relative mt-5">
         <Search className="pointer-events-none absolute top-3.5 left-4 size-4 text-muted-foreground" />
@@ -68,36 +89,35 @@ function CommunitiesList() {
           className="pl-10"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search communities"
+          placeholder="Search Quads"
         />
       </div>
       <Button className="mt-4 w-full" onClick={() => setCreating((v) => !v)}>
         <Plus className="size-4" />
-        Create
+        Create a Quad
       </Button>
       {creating ? (
         <form
           className="mt-3 rounded-2xl bg-card p-4 ring-1 ring-border"
           onSubmit={(e) => {
             e.preventDefault();
-            if (createKind === "Class" && !canGovernClass(role)) {
-              toast.error("Only a class governor can open an official class group.");
+            if (!user) {
+              toast.error("Sign in to create a Quad.");
               return;
             }
-            toast.success(
-              createKind === "Study"
-                ? "Study group drafted. Students can join without lecturer permission."
-                : "Community drafted in this demo.",
-            );
-            setCreating(false);
-            setName("");
+            if (createKind === "Class" && !canGovernClass(role)) {
+              toast.error("Only a class governor can open an official class space.");
+              return;
+            }
+            createMut.mutate({ name: name.trim(), kind: createKind, description });
           }}
         >
           <p className="text-sm text-muted-foreground">
-            Students can start study groups. Official class groups stay with class governors. Lecturers teach on Board.
+            Any real member can start a Quad around something real — music, sports, a podcast, a
+            creator community, a study scene. Official class spaces stay with class governors.
           </p>
-          <div className="mt-3 flex gap-2">
-            {(["Study", "Interest", "Class"] as const).map((k) => (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {QUAD_TYPES.map((k) => (
               <button
                 key={k}
                 type="button"
@@ -107,7 +127,7 @@ function CommunitiesList() {
                   createKind === k ? "bg-ink text-paper" : "bg-secondary",
                 )}
               >
-                {k === "Study" ? "Study group" : k === "Class" ? "Class group" : "Interest"}
+                {k}
               </button>
             ))}
           </div>
@@ -115,16 +135,22 @@ function CommunitiesList() {
             className="mt-3"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={createKind === "Study" ? "Night calculus group" : "Community name"}
+            placeholder={createKind === "Podcast" ? "My podcast community" : "Quad name"}
           />
-          <Button type="submit" className="mt-3 w-full" disabled={!name.trim()}>
-            Save draft
+          <Textarea
+            className="mt-2 min-h-16"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What is this Quad about? (optional)"
+          />
+          <Button type="submit" className="mt-3 w-full" disabled={!name.trim() || createMut.isPending}>
+            {createMut.isPending ? "Creating…" : "Create Quad"}
           </Button>
         </form>
       ) : null}
 
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        {(["all", "Class", "Study", "University", "Faculty", "Interest"] as const).map((k) => (
+        {KIND_FILTERS.map((k) => (
           <button
             key={k}
             type="button"
@@ -134,7 +160,7 @@ function CommunitiesList() {
               kind === k ? "bg-ink text-paper" : "bg-card ring-1 ring-border text-muted-foreground",
             )}
           >
-            {k === "all" ? "All" : k === "Class" ? "Classes" : k === "Study" ? "Study groups" : k === "Interest" ? "Scenes" : k}
+            {k === "all" ? "All" : k === "Class" ? "Classes" : k === "Study" ? "Study" : k}
           </button>
         ))}
       </div>
@@ -158,30 +184,9 @@ function CommunitiesList() {
             tab === "mine" ? "bg-ink text-paper" : "bg-card ring-1 ring-border text-muted-foreground",
           )}
         >
-          My Communities
+          My Quads
         </button>
       </div>
-
-      <Link
-        to="/communities/$id"
-        params={{ id: data?.communities[0]?.id ?? "unilag-campus" }}
-        className="relative mt-5 block overflow-hidden rounded-3xl"
-      >
-        <img src="/covers/campus-night.jpg" alt="" className="h-56 w-full object-cover" />
-        <div className="absolute inset-0 bg-ink/45" />
-        <div className="absolute inset-0 flex flex-col justify-end p-5 text-paper">
-          <span className="self-start rounded-full bg-paper/15 px-3 py-1 text-[10px] font-semibold tracking-widest uppercase">
-            Community spotlight
-          </span>
-          <h2 className="mt-3 font-display text-3xl text-paper">Make something worth sharing.</h2>
-          <p className="mt-2 text-sm text-paper/80">
-            Campus Entrepreneurs brings student ideas, feedback and collaboration into one room.
-          </p>
-          <span className="mt-4 inline-flex h-10 w-fit items-center rounded-full bg-paper px-4 text-sm font-medium text-ink">
-            Visit community
-          </span>
-        </div>
-      </Link>
 
       <ul className="mt-5 space-y-3 pb-8">
         {shown.map((c) => (
@@ -206,6 +211,11 @@ function CommunitiesList() {
             </Link>
           </li>
         ))}
+        {shown.length === 0 ? (
+          <li className="rounded-2xl bg-card p-4 text-sm text-muted-foreground ring-1 ring-border">
+            No Quads here yet. This list only shows what actually exists.
+          </li>
+        ) : null}
       </ul>
     </main>
   );

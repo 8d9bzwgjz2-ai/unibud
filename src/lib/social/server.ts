@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { mapConvo, mapMessage } from "@/lib/unibud/map";
+import { recordLyncShare } from "@/lib/lync/server";
 
 async function loadConversation(userId: string, id: string) {
   const sql = await getSql();
@@ -95,6 +96,7 @@ export const createPost = createServerFn({ method: "POST" })
       image?: string;
       video?: string;
       kind?: "post" | "reel";
+      groupId?: string;
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -106,11 +108,14 @@ export const createPost = createServerFn({ method: "POST" })
     const id = `p_${crypto.randomUUID().slice(0, 8)}`;
     const kind = data.kind ?? (data.video ? "reel" : "post");
     try {
-      await sql`insert into posts (id, community_id, author_handle, body, image, video, kind)
-        values (${id}, ${data.communityId}, ${handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${kind})`;
+      await sql`insert into posts (id, community_id, author_handle, body, image, video, kind, group_id)
+        values (${id}, ${data.communityId}, ${handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${kind}, ${data.groupId ?? null})`;
     } catch {
       await sql`insert into posts (id, community_id, author_handle, body, image)
         values (${id}, ${data.communityId}, ${handle}, ${body}, ${data.image ?? null})`;
     }
+    // A published share is a real qualifying share — it advances the Lync
+    // server-side, with notifications only for real state transitions.
+    await recordLyncShare(context.userId, id);
     return { id, handle, body, kind };
   });

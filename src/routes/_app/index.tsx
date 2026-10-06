@@ -3,6 +3,7 @@ import { BadgeCheck, Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Share
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/unibud/person";
 import { CampusMoments } from "@/components/unibud/campus-moments";
+import { LyncStatus } from "@/components/unibud/lync-status";
 import { ReelsStage } from "@/components/unibud/reels-stage";
 import { EmptyState } from "@/components/unibud/empty";
 import { communityById, personByHandle, POSTS } from "@/lib/unibud/catalog";
@@ -129,6 +130,7 @@ function Square() {
               </button>
             </div>
           </div>
+          <LyncStatus />
           <div className="mt-3">
             <CampusMoments
               signedIn
@@ -333,7 +335,6 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                 {person?.verified ? (
                   <BadgeCheck className="ml-1 inline size-3.5 text-bud" />
                 ) : null}
-                <span className="ml-1 font-normal text-muted-foreground">@{post.authorHandle}</span>
               </p>
               <p className="text-xs text-muted-foreground">
                 {community ? (

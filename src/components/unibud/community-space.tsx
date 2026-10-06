@@ -11,6 +11,12 @@ import { communityById, personByHandle } from "@/lib/unibud/catalog";
 import { relativeTime } from "@/lib/unibud/format";
 import { useCatalog } from "@/lib/unibud/queries";
 import { createPost, joinCommunity, myCommunities } from "@/lib/social/server";
+import {
+  createQuadGroup,
+  joinQuadGroup,
+  myQuadGroups,
+  postQuadAnnouncement,
+} from "@/lib/unibud/quad.server";
 import { COMMUNITY_META, communityKindCopy, communityKindLabel } from "@/lib/unibud/community-meta";
 import { canGovernClass, canModerateCommunity, canTeach } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
@@ -21,7 +27,12 @@ export function CommunitySpace({ id }: { id: string }) {
   const qc = useQueryClient();
   const role = useCampusStore((s) => s.role ?? "student");
   const community = data?.communities.find((c) => c.id === id) ?? communityById(id);
-  const posts = (data?.posts ?? []).filter((p) => p.communityId === id);
+  const allQuadPosts = (data?.posts ?? []).filter((p) => p.communityId === id);
+  const groups = (data?.quadGroups ?? []).filter((g) => g.quadId === id);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const posts = selectedGroup
+    ? allQuadPosts.filter((p) => p.groupId === selectedGroup)
+    : allQuadPosts;
   const joined = useQuery({
     queryKey: ["my-communities"],
     queryFn: () => myCommunities(),
@@ -30,11 +41,22 @@ export function CommunitySpace({ id }: { id: string }) {
   const isIn = joined.data?.includes(id);
   const [body, setBody] = useState("");
   const [announcement, setAnnouncement] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [showGroupForm, setShowGroupForm] = useState(false);
   const meta = COMMUNITY_META[id];
   const isClass = community?.kind === "Class";
   const isStudy = community?.kind === "Study";
   const governorHere = isClass && canGovernClass(role);
   const moderatorHere = Boolean(meta?.moderatorHandles) && canModerateCommunity(role);
+  // Real permission: the Quad's creator manages its groups; class spaces keep
+  // the existing governor rule.
+  const creatorHere = Boolean(user && community?.createdBy === user.id);
+  const canManageGroups = creatorHere || governorHere || moderatorHere;
+  const myGroups = useQuery({
+    queryKey: ["my-quad-groups"],
+    queryFn: () => myQuadGroups(),
+    enabled: Boolean(user),
+  });
   const spills = useCampusStore((s) => s.spills);
   const flagged = useCampusStore((s) => s.flaggedSpills);
   const communitySpills = spills.filter((x) => x.communityId === id && !flagged.includes(x.id));
@@ -44,11 +66,35 @@ export function CommunitySpace({ id }: { id: string }) {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["my-communities"] }),
   });
   const postMut = useMutation({
-    mutationFn: () => createPost({ data: { communityId: id, body } }),
+    mutationFn: () =>
+      createPost({ data: { communityId: id, body, groupId: selectedGroup ?? undefined } }),
     onSuccess: () => {
       setBody("");
       toast.success("Posted");
       void refetch();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const createGroupMut = useMutation({
+    mutationFn: () => createQuadGroup({ data: { quadId: id, name: groupName } }),
+    onSuccess: () => {
+      setGroupName("");
+      setShowGroupForm(false);
+      void refetch();
+      toast.success("Group opened inside the Quad.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const joinGroupMut = useMutation({
+    mutationFn: (groupId: string) => joinQuadGroup({ data: groupId }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["my-quad-groups"] }),
+  });
+  const announceMut = useMutation({
+    mutationFn: () => postQuadAnnouncement({ data: { quadId: id, body: announcement } }),
+    onSuccess: () => {
+      setAnnouncement("");
+      void refetch();
+      toast.success("Announcement published.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -94,27 +140,33 @@ export function CommunitySpace({ id }: { id: string }) {
         </Link>
       ) : null}
 
-      {governorHere ? (
+      {canManageGroups ? (
         <section className="mt-5 rounded-2xl bg-card p-4 ring-1 ring-border">
-          <p className="text-xs font-semibold tracking-wide uppercase">Class governor</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Coordination only. This is not Tutor Mode and not lecturer attendance.
+          <p className="text-xs font-semibold tracking-wide uppercase">
+            {creatorHere ? "Your Quad" : "Class governor"}
           </p>
+          {isClass ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Coordination only. This is not Tutor Mode and not lecturer attendance.
+            </p>
+          ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link
-              to="/communities/$id"
-              params={{ id: "night-study" }}
-              className="inline-flex h-9 items-center rounded-full bg-secondary px-3 text-sm"
-            >
-              Organise a study group
-            </Link>
+            {isClass ? (
+              <Link
+                to="/communities/$id"
+                params={{ id: "night-study" }}
+                className="inline-flex h-9 items-center rounded-full bg-secondary px-3 text-sm"
+              >
+                Organise a study group
+              </Link>
+            ) : null}
             {meta?.chatId ? (
               <Link
                 to="/messages/$id"
                 params={{ id: meta.chatId }}
                 className="inline-flex h-9 items-center rounded-full bg-secondary px-3 text-sm"
               >
-                Class chat
+                {isClass ? "Class" : "Quad"} chat
               </Link>
             ) : null}
           </div>
@@ -122,17 +174,14 @@ export function CommunitySpace({ id }: { id: string }) {
             className="mt-3"
             value={announcement}
             onChange={(e) => setAnnouncement(e.target.value)}
-            placeholder="Class announcement"
+            placeholder={isClass ? "Class announcement" : "Announcement for the Quad"}
           />
           <Button
             className="mt-2"
             size="sm"
             variant="outline"
-            disabled={!announcement.trim()}
-            onClick={() => {
-              toast.success("Announcement noted for the class (demo).");
-              setAnnouncement("");
-            }}
+            disabled={!announcement.trim() || announceMut.isPending}
+            onClick={() => announceMut.mutate()}
           >
             Publish update
           </Button>
@@ -154,19 +203,21 @@ export function CommunitySpace({ id }: { id: string }) {
         </p>
       ) : null}
 
-      {meta?.announcements?.length ? (
+      {(data?.quadAnnouncements ?? []).filter((a) => a.quadId === id).length ? (
         <section className="mt-6">
           <h2 className="text-sm font-medium">Announcements</h2>
           <ul className="mt-2 space-y-2">
-            {meta.announcements.map((a) => (
-              <li key={a.id} className="rounded-2xl bg-secondary p-3">
-                <p className="text-sm font-medium">{a.title}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{a.body}</p>
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  {a.by} · {relativeTime(a.createdAt)}
-                </p>
-              </li>
-            ))}
+            {(data?.quadAnnouncements ?? [])
+              .filter((a) => a.quadId === id)
+              .map((a) => (
+                <li key={a.id} className="rounded-2xl bg-secondary p-3">
+                  <p className="text-sm leading-relaxed">{a.body}</p>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    by {personByHandle(a.authorHandle)?.name ?? a.authorHandle} ·{" "}
+                    {relativeTime(a.createdAt)}
+                  </p>
+                </li>
+              ))}
           </ul>
         </section>
       ) : null}

@@ -147,7 +147,6 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
             <Link to="/u/$handle" params={{ handle: spill.authorHandle }} className="hover:underline">
               {name}
             </Link>
-            <span className="ml-1 font-normal text-muted-foreground">@{spill.authorHandle}</span>
             <span className="ml-1 font-normal text-muted-foreground">· {relativeTime(spill.createdAt)}</span>
           </p>
           {community ? (
