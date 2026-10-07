@@ -45,7 +45,6 @@ import { Route as AppAudioIdRouteImport } from './routes/_app/audio.$id'
 import { Route as AppBoardIdRouteImport } from './routes/_app/board.$id'
 import { Route as AppBudCommunitiesRouteImport } from './routes/_app/bud.communities'
 import { Route as AppBudFixerRouteImport } from './routes/_app/bud.fixer'
-import { Route as AppCommunitiesCommunityIdRouteImport } from './routes/_app/communities/$communityId'
 import { Route as AppCommunitiesIdRouteImport } from './routes/_app/communities.$id'
 import { Route as AppMarketIndexRouteImport } from './routes/_app/market/index'
 import { Route as AppMarketIdRouteImport } from './routes/_app/market.$id'
@@ -236,12 +235,6 @@ const AppBudFixerRoute = AppBudFixerRouteImport.update({
   path: '/fixer',
   getParentRoute: () => AppBudRoute,
 } as any)
-const AppCommunitiesCommunityIdRoute =
-  AppCommunitiesCommunityIdRouteImport.update({
-    id: '/$communityId',
-    path: '/$communityId',
-    getParentRoute: () => AppCommunitiesRoute,
-  } as any)
 const AppCommunitiesIdRoute = AppCommunitiesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -329,7 +322,6 @@ export interface FileRoutesByFullPath {
   '/board/$id': typeof AppBoardIdRoute
   '/bud/communities': typeof AppBudCommunitiesRoute
   '/bud/fixer': typeof AppBudFixerRoute
-  '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
   '/market/$id': typeof AppMarketIdRoute
   '/market/$listingId': typeof AppMarketListingIdRoute
@@ -376,7 +368,6 @@ export interface FileRoutesByTo {
   '/board/$id': typeof AppBoardIdRoute
   '/bud/communities': typeof AppBudCommunitiesRoute
   '/bud/fixer': typeof AppBudFixerRoute
-  '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
   '/market/$id': typeof AppMarketIdRoute
   '/market/$listingId': typeof AppMarketListingIdRoute
@@ -426,7 +417,6 @@ export interface FileRoutesById {
   '/_app/board/$id': typeof AppBoardIdRoute
   '/_app/bud/communities': typeof AppBudCommunitiesRoute
   '/_app/bud/fixer': typeof AppBudFixerRoute
-  '/_app/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/_app/communities/$id': typeof AppCommunitiesIdRoute
   '/_app/market/$id': typeof AppMarketIdRoute
   '/_app/market/$listingId': typeof AppMarketListingIdRoute
@@ -476,7 +466,6 @@ export interface FileRouteTypes {
     | '/board/$id'
     | '/bud/communities'
     | '/bud/fixer'
-    | '/communities/$communityId'
     | '/communities/$id'
     | '/market/$id'
     | '/market/$listingId'
@@ -523,7 +512,6 @@ export interface FileRouteTypes {
     | '/board/$id'
     | '/bud/communities'
     | '/bud/fixer'
-    | '/communities/$communityId'
     | '/communities/$id'
     | '/market/$id'
     | '/market/$listingId'
@@ -572,7 +560,6 @@ export interface FileRouteTypes {
     | '/_app/board/$id'
     | '/_app/bud/communities'
     | '/_app/bud/fixer'
-    | '/_app/communities/$communityId'
     | '/_app/communities/$id'
     | '/_app/market/$id'
     | '/_app/market/$listingId'
@@ -846,13 +833,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBudFixerRouteImport
       parentRoute: typeof AppBudRoute
     }
-    '/_app/communities/$communityId': {
-      id: '/_app/communities/$communityId'
-      path: '/$communityId'
-      fullPath: '/communities/$communityId'
-      preLoaderRoute: typeof AppCommunitiesCommunityIdRouteImport
-      parentRoute: typeof AppCommunitiesRoute
-    }
     '/_app/communities/$id': {
       id: '/_app/communities/$id'
       path: '/$id'
@@ -952,12 +932,10 @@ const AppBudRouteWithChildren =
   AppBudRoute._addFileChildren(AppBudRouteChildren)
 
 interface AppCommunitiesRouteChildren {
-  AppCommunitiesCommunityIdRoute: typeof AppCommunitiesCommunityIdRoute
   AppCommunitiesIdRoute: typeof AppCommunitiesIdRoute
 }
 
 const AppCommunitiesRouteChildren: AppCommunitiesRouteChildren = {
-  AppCommunitiesCommunityIdRoute: AppCommunitiesCommunityIdRoute,
   AppCommunitiesIdRoute: AppCommunitiesIdRoute,
 }
 
