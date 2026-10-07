@@ -5,6 +5,7 @@ import { mapConvo, mapMessage } from "@/lib/unibud/map";
 import { PEOPLE } from "@/lib/unibud/catalog";
 import { notify } from "@/lib/unibud/server";
 import { recordLyncShareFor } from "@/lib/lync/server";
+import { toggleCommunityMembership } from "@/lib/quad/server";
 
 async function loadConversation(userId: string, id: string) {
   const sql = await getSql();
@@ -69,22 +70,25 @@ export const sendMessage = createServerFn({ method: "POST" })
       values (${crypto.randomUUID()}, ${data.conversationId}, ${context.userId}, ${"me"}, ${body || preview}, ${data.mediaId ?? null}, ${data.shareKind ?? null}, ${data.shareJson ?? null})`;
     await sql`update conversations set last_body = ${preview}, updated_at = now()
       where id = ${data.conversationId} and user_id = ${context.userId}`;
+    // Sharing content into a conversation is a qualifying Lync share (once per
+    // calendar day); Lync must never block the message.
+    if (data.shareJson || data.shareKind) {
+      try {
+        await recordLyncShareFor(context.userId);
+      } catch {
+        // Lync must never block a share
+      }
+    }
     return loadConversation(context.userId, data.conversationId);
   });
 
 export const joinCommunity = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((communityId: string) => communityId)
-  .handler(async ({ context, data: communityId }) => {
-    const sql = await getSql();
-    const existing = await sql`select community_id from community_members where user_id = ${context.userId} and community_id = ${communityId}`;
-    if (existing[0]) {
-      await sql`delete from community_members where user_id = ${context.userId} and community_id = ${communityId}`;
-      return { joined: false };
-    }
-    await sql`insert into community_members (user_id, community_id) values (${context.userId}, ${communityId})`;
-    return { joined: true };
-  });
+  .handler(async ({ context, data: communityId }) =>
+    // Shared core: duplicate-safe toggle, privacy rules, accurate member counts.
+    toggleCommunityMembership(context.userId, communityId),
+  );
 
 export const myCommunities = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -122,7 +126,11 @@ export const createPost = createServerFn({ method: "POST" })
     }
     // Record a Lync qualifying share (once per calendar day)
     try {
-      await recordLyncShareFor(context.userId);
+      const state = await recordLyncShareFor(context.userId);
+      // Persistent recognition for milestones earned by this share.
+      for (const level of state.newlyEarned) {
+        await notify(context.userId, "events", `Lync ${level}-day milestone`, `${level} days of sharing in a row — badge earned and kept on your profile.`, "/profile");
+      }
     } catch {
       // Lync must never block a post
     }

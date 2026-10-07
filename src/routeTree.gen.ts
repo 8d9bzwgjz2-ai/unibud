@@ -54,6 +54,8 @@ import { Route as AppRiffIdRouteImport } from './routes/_app/riff.$id'
 import { Route as AppSpillIdRouteImport } from './routes/_app/spill.$id'
 import { Route as AppUHandleRouteImport } from './routes/_app/u.$handle'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiGoogleCalendarAuthorizeRouteImport } from './routes/api/google-calendar.authorize'
+import { Route as ApiGoogleCalendarCallbackRouteImport } from './routes/api/google-calendar.callback'
 import { Route as ApiMediaIdRouteImport } from './routes/api/media.$id'
 
 const AppRoute = AppRouteImport.update({
@@ -280,6 +282,18 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGoogleCalendarAuthorizeRoute =
+  ApiGoogleCalendarAuthorizeRouteImport.update({
+    id: '/api/google-calendar/authorize',
+    path: '/api/google-calendar/authorize',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiGoogleCalendarCallbackRoute =
+  ApiGoogleCalendarCallbackRouteImport.update({
+    id: '/api/google-calendar/callback',
+    path: '/api/google-calendar/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiMediaIdRoute = ApiMediaIdRouteImport.update({
   id: '/api/media/$id',
   path: '/api/media/$id',
@@ -330,6 +344,8 @@ export interface FileRoutesByFullPath {
   '/spill/$id': typeof AppSpillIdRoute
   '/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/google-calendar/authorize': typeof ApiGoogleCalendarAuthorizeRoute
+  '/api/google-calendar/callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/media/$id': typeof ApiMediaIdRoute
   '/market/': typeof AppMarketIndexRoute
 }
@@ -376,6 +392,8 @@ export interface FileRoutesByTo {
   '/spill/$id': typeof AppSpillIdRoute
   '/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/google-calendar/authorize': typeof ApiGoogleCalendarAuthorizeRoute
+  '/api/google-calendar/callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/media/$id': typeof ApiMediaIdRoute
   '/market': typeof AppMarketIndexRoute
 }
@@ -425,6 +443,8 @@ export interface FileRoutesById {
   '/_app/spill/$id': typeof AppSpillIdRoute
   '/_app/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/google-calendar/authorize': typeof ApiGoogleCalendarAuthorizeRoute
+  '/api/google-calendar/callback': typeof ApiGoogleCalendarCallbackRoute
   '/api/media/$id': typeof ApiMediaIdRoute
   '/_app/market/': typeof AppMarketIndexRoute
 }
@@ -474,6 +494,8 @@ export interface FileRouteTypes {
     | '/spill/$id'
     | '/u/$handle'
     | '/api/auth/$'
+    | '/api/google-calendar/authorize'
+    | '/api/google-calendar/callback'
     | '/api/media/$id'
     | '/market/'
   fileRoutesByTo: FileRoutesByTo
@@ -520,6 +542,8 @@ export interface FileRouteTypes {
     | '/spill/$id'
     | '/u/$handle'
     | '/api/auth/$'
+    | '/api/google-calendar/authorize'
+    | '/api/google-calendar/callback'
     | '/api/media/$id'
     | '/market'
   id:
@@ -568,6 +592,8 @@ export interface FileRouteTypes {
     | '/_app/spill/$id'
     | '/_app/u/$handle'
     | '/api/auth/$'
+    | '/api/google-calendar/authorize'
+    | '/api/google-calendar/callback'
     | '/api/media/$id'
     | '/_app/market/'
   fileRoutesById: FileRoutesById
@@ -576,6 +602,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiGoogleCalendarAuthorizeRoute: typeof ApiGoogleCalendarAuthorizeRoute
+  ApiGoogleCalendarCallbackRoute: typeof ApiGoogleCalendarCallbackRoute
   ApiMediaIdRoute: typeof ApiMediaIdRoute
 }
 
@@ -896,6 +924,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/google-calendar/authorize': {
+      id: '/api/google-calendar/authorize'
+      path: '/api/google-calendar/authorize'
+      fullPath: '/api/google-calendar/authorize'
+      preLoaderRoute: typeof ApiGoogleCalendarAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google-calendar/callback': {
+      id: '/api/google-calendar/callback'
+      path: '/api/google-calendar/callback'
+      fullPath: '/api/google-calendar/callback'
+      preLoaderRoute: typeof ApiGoogleCalendarCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/media/$id': {
       id: '/api/media/$id'
       path: '/api/media/$id'
@@ -1070,6 +1112,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiGoogleCalendarAuthorizeRoute: ApiGoogleCalendarAuthorizeRoute,
+  ApiGoogleCalendarCallbackRoute: ApiGoogleCalendarCallbackRoute,
   ApiMediaIdRoute: ApiMediaIdRoute,
 }
 export const routeTree = rootRouteImport

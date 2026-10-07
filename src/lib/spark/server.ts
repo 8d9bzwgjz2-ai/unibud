@@ -12,7 +12,89 @@ export type CalendarEvent = {
   endsAt: string;
   status: string;
   participants: string[];
+  /** True when the event is mirrored in the student's Google Calendar. */
+  googleSynced: boolean;
 };
+
+/** Outcome of mirroring a confirmed booking/commitment to Google Calendar. */
+export type GoogleSyncResult = "synced" | "failed" | "skipped";
+
+/**
+ * Google availability check before confirming a booking. Blocking when
+ * Google answers with a conflict; silently skipped when the student has not
+ * connected, Google is not configured, or the check itself fails.
+ */
+async function assertGoogleFree(userId: string, startsAt: string, endsAt: string): Promise<void> {
+  try {
+    const google = await import("./google.server");
+    if (!google.googleConfigured()) return;
+    const token = await google.getValidAccessToken(userId);
+    if (!token) return;
+    const conflict = await google.checkGoogleAvailability(token, startsAt, endsAt);
+    if (conflict) {
+      throw new Error("That time overlaps with an event in your Google Calendar. Pick a different time.");
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("Google Calendar")) throw e;
+    // Revoked permissions / network failure — degrade to UNIBUD-only checks.
+  }
+}
+
+/** Mirror a confirmed booking/commitment into Google Calendar (best-effort). */
+async function pushEventToGoogle(
+  userId: string,
+  sourceType: "tutoring" | "community_service",
+  sourceId: string,
+  event: { title: string; startsAt: string; endsAt: string; description: string },
+): Promise<GoogleSyncResult> {
+  try {
+    const google = await import("./google.server");
+    if (!google.googleConfigured()) return "skipped";
+    const token = await google.getValidAccessToken(userId);
+    if (!token) return "skipped";
+    const created = await google.createGoogleEvent(token, {
+      summary: event.title,
+      description: event.description,
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+    });
+    const sql = await getSql();
+    await sql`update calendar_events set google_event_id = ${created.id}
+      where user_id = ${userId} and source_type = ${sourceType} and source_id = ${sourceId}`;
+    return "synced";
+  } catch {
+    return "failed";
+  }
+}
+
+/** Keep the Google copy in step with a cancellation (best-effort, never blocks). */
+async function cancelGoogleEventFor(userId: string, googleEventId: string | null): Promise<void> {
+  if (!googleEventId) return;
+  try {
+    const google = await import("./google.server");
+    const token = await google.getValidAccessToken(userId);
+    if (token) await google.cancelGoogleEvent(token, googleEventId);
+  } catch {
+    // Revoked permissions / network failure — the UNIBUD cancellation stands.
+  }
+}
+
+/** Keep the Google copy in step with a reschedule (best-effort, never blocks). */
+async function rescheduleGoogleEventFor(
+  userId: string,
+  googleEventId: string | null,
+  startsAt: string,
+  endsAt: string,
+): Promise<void> {
+  if (!googleEventId) return;
+  try {
+    const google = await import("./google.server");
+    const token = await google.getValidAccessToken(userId);
+    if (token) await google.updateGoogleEvent(token, googleEventId, { startsAt, endsAt });
+  } catch {
+    // Revoked permissions / network failure — the UNIBUD reschedule stands.
+  }
+}
 
 export type BookTutoringInput = {
   tutorHandle: string;
@@ -85,6 +167,7 @@ function mapEvent(r: {
   ends_at: string;
   status: string;
   participants: string;
+  google_event_id?: string | null;
 }): CalendarEvent {
   let participants: string[] = [];
   try {
@@ -101,6 +184,7 @@ function mapEvent(r: {
     endsAt: r.ends_at,
     status: r.status,
     participants,
+    googleSynced: Boolean(r.google_event_id),
   };
 }
 
@@ -126,6 +210,8 @@ export const bookTutoringSession = createServerFn({ method: "POST" })
     const startsAtIso = startsAt.toISOString();
 
     await checkDoubleBooking(sql, context.userId, startsAtIso, endsAt);
+    // Google Calendar availability too (when connected) — blocks on a real conflict.
+    await assertGoogleFree(context.userId, startsAtIso, endsAt);
 
     const id = `tb_${crypto.randomUUID().slice(0, 10)}`;
     await sql`insert into tutoring_bookings (id, student_id, tutor_handle, course_code, title, scheduled_at, duration_min, status, note)
@@ -135,9 +221,17 @@ export const bookTutoringSession = createServerFn({ method: "POST" })
     // Automatically place the confirmed session into the calendar
     await syncCalendarEvent(sql, context.userId, "tutoring", id, title, startsAtIso, endsAt, "confirmed", [tutorHandle]);
 
+    // Mirror the confirmed session into the student's Google Calendar
+    const googleSync = await pushEventToGoogle(context.userId, "tutoring", id, {
+      title,
+      startsAt: startsAtIso,
+      endsAt,
+      description: `Tutoring with @${tutorHandle}${data.courseCode?.trim() ? ` · ${data.courseCode.trim()}` : ""} — booked via UNIBUD Spark.`,
+    });
+
     await notify(context.userId, "class", "Tutoring session booked", `${title} with @${tutorHandle}`, "/spark");
 
-    return { id, tutorHandle, title, startsAt: startsAtIso, durationMin };
+    return { id, tutorHandle, title, startsAt: startsAtIso, durationMin, googleSync };
   });
 
 /**
@@ -161,6 +255,8 @@ export const commitCommunityService = createServerFn({ method: "POST" })
     const startsAtIso = startsAt.toISOString();
 
     await checkDoubleBooking(sql, context.userId, startsAtIso, endsAt);
+    // Google Calendar availability too (when connected) — blocks on a real conflict.
+    await assertGoogleFree(context.userId, startsAtIso, endsAt);
 
     const id = `cs_${crypto.randomUUID().slice(0, 10)}`;
     await sql`insert into community_service_commitments (id, student_id, title, organization, scheduled_at, duration_min, hours, status)
@@ -168,9 +264,17 @@ export const commitCommunityService = createServerFn({ method: "POST" })
 
     await syncCalendarEvent(sql, context.userId, "community_service", id, title, startsAtIso, endsAt, "confirmed", []);
 
+    // Mirror the confirmed commitment into the student's Google Calendar
+    const googleSync = await pushEventToGoogle(context.userId, "community_service", id, {
+      title,
+      startsAt: startsAtIso,
+      endsAt,
+      description: `Community service${data.organization.trim() ? ` · ${data.organization.trim()}` : ""} — committed via UNIBUD Spark.`,
+    });
+
     await notify(context.userId, "events", "Community service committed", `${title}${data.organization.trim() ? ` · ${data.organization.trim()}` : ""}`, "/spark");
 
-    return { id, title, startsAt: startsAtIso, durationMin, hours };
+    return { id, title, startsAt: startsAtIso, durationMin, hours, googleSync };
   });
 
 /** Get all calendar events for the signed-in student, sorted by start time. */
@@ -201,6 +305,8 @@ export const cancelCalendarEvent = createServerFn({ method: "POST" })
     }
     // Sync the calendar event
     await sql`update calendar_events set status = 'cancelled' where id = ${eventId} and user_id = ${context.userId}`;
+    // Keep the Google Calendar copy in step (best-effort)
+    await cancelGoogleEventFor(context.userId, event.google_event_id ?? null);
     return { cancelled: true as const };
   });
 
@@ -236,6 +342,36 @@ export const rescheduleCalendarEvent = createServerFn({ method: "POST" })
     // Sync the calendar event
     await sql`update calendar_events set starts_at = ${newStartIso}, ends_at = ${newEnd}, status = 'confirmed'
       where id = ${data.eventId} and user_id = ${context.userId}`;
+    // Keep the Google Calendar copy in step (best-effort)
+    await rescheduleGoogleEventFor(context.userId, event.google_event_id ?? null, newStartIso, newEnd);
 
     return { rescheduled: true as const, startsAt: newStartIso };
+  });
+
+/**
+ * Google Calendar connection state for the signed-in student. Only booleans
+ * and the account email are exposed — tokens and credentials never leave the
+ * server.
+ */
+export const getGoogleCalendarStatus = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const google = await import("./google.server");
+    const configured = google.googleConfigured();
+    if (!configured) return { configured: false as const, connected: false as const, email: null };
+    const conn = await google.getConnection(context.userId);
+    return {
+      configured: true as const,
+      connected: Boolean(conn),
+      email: conn?.google_email ?? null,
+    };
+  });
+
+/** Disconnect the student's Google Calendar (drops the stored tokens). */
+export const disconnectGoogleCalendar = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const google = await import("./google.server");
+    await google.clearConnection(context.userId);
+    return { disconnected: true as const };
   });
