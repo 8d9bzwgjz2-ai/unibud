@@ -19,7 +19,11 @@ const databaseConfigured = isDatabaseConfigured();
 /** Re-export so callers can branch on it without importing `server.ts`. */
 export { authConfigured };
 
-if (databaseConfigured && !authConfigured) {
+if (
+  databaseConfigured &&
+  !authConfigured &&
+  process.env.BASE44_PREVIEW_MODE !== "1"
+) {
   console.error(
     "[auth] DATABASE_URL is set but auth is disabled (VITE_AUTH_ENABLED=false) " +
       "— requireUserId() will reject every request (fail closed) rather than " +
