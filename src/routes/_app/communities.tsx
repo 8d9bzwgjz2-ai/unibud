@@ -27,6 +27,12 @@ function Communities() {
 
 function CommunitiesList() {
   const { data } = useCatalog();
+  const { user } = useAuthReady();
+  const quads = useQuery({
+    queryKey: ["quads"],
+    queryFn: () => listQuads(),
+    enabled: Boolean(user),
+  });
   const catalogRooms = data?.communities ?? [];
   const quadRooms = quads.data ?? [];
   const allRooms = [
@@ -34,7 +40,6 @@ function CommunitiesList() {
     ...quadRooms,
     ...catalogRooms.filter((c) => !quadRooms.some((x) => x.id === c.id)),
   ];
-  const { user } = useAuthReady();
   const role = useCampusStore((s) => s.role ?? "student");
   const [tab, setTab] = useState<"discover" | "mine">("discover");
   const [kind, setKind] = useState<"all" | "Class" | "Study" | "University" | "Faculty" | "Interest">("all");
@@ -48,11 +53,6 @@ function CommunitiesList() {
   const mine = useQuery({
     queryKey: ["my-communities"],
     queryFn: () => myCommunities(),
-    enabled: Boolean(user),
-  });
-  const quads = useQuery({
-    queryKey: ["quads"],
-    queryFn: () => listQuads(),
     enabled: Boolean(user),
   });
   const createMut = useMutation({

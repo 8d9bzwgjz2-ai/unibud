@@ -4,7 +4,12 @@ import type { CampusRole } from "./roles";
 import type { IdentityTag } from "./identity-tags";
 import { SEED_SPILLS, type SpillPost, type SpillReply } from "./spill-data";
 import type { ChatShare } from "@/lib/media/share";
-import { RightsManagement, SEED_ORIGINAL_AUDIO } from "@/lib/music/audio";
+import {
+  RightsManagement,
+  SEED_ORIGINAL_AUDIO,
+  type AudioReport,
+  type UnibudAudio,
+} from "@/lib/music/audio";
 
 export type BudShortcut = "top" | "bottom" | "hidden";
 export type ProfileVisibility = "public" | "campus" | "connections";

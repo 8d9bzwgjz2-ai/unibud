@@ -84,6 +84,17 @@ export async function getSessionUser(
  */
 export async function requireUserId(bearerToken?: string): Promise<string> {
   if (!authConfigured && !gateIdentityEnabled()) {
+    // Base44 sandbox preview only: auth is explicitly disabled for the preview
+    // (VITE_AUTH_ENABLED=false), which runs against a local dev Postgres —
+    // resolve the shared dev user so the preview needs no sign-in. Gated on the
+    // exact BASE44_PREVIEW_MODE="1"; everywhere else (including any real
+    // deployment database) the fail-closed rule below still applies.
+    if (
+      process.env.BASE44_PREVIEW_MODE === "1" &&
+      process.env.VITE_AUTH_ENABLED === "false"
+    ) {
+      return DEV_USER_ID;
+    }
     if (databaseConfigured) {
       throw new Error(
         "Auth is disabled (VITE_AUTH_ENABLED=false) but DATABASE_URL is set — " +

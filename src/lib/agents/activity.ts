@@ -1,8 +1,9 @@
 import type { AgentActivityEvent, AgentActivityState, AgentId } from "./contracts";
+import type { Sql } from "@/lib/db";
 
 export type ActivitySink = (event: AgentActivityEvent) => Promise<void>;
 
-export function createActivitySink(sql: Awaited<ReturnType<import("@/lib/db").getSql>>): ActivitySink {
+export function createActivitySink(sql: Sql): ActivitySink {
   return async (event) => {
     try {
       await sql`

@@ -93,6 +93,9 @@ export type BrowsePage = {
   albums: Album[];
 };
 
+/** Provider catalogue readiness — an unprovisioned partner serves nothing. */
+export type CatalogueStatus = "unprovisioned" | "ready";
+
 export type MusicProvider = {
   id: string;
   name: string;

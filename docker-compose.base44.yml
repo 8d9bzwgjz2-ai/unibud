@@ -1,0 +1,80 @@
+# Base44 sandbox development environment for UNIBUD.
+#
+# Runs the TanStack Start app straight from the cloned source (Vite dev server
+# on container port 8080, mapped to host port 3000 for the preview proxy) plus
+# a local PostgreSQL for the Kysely/Better Auth schema (migrations/).
+#
+# Sandbox-only preview behavior:
+# - VITE_AUTH_ENABLED=false: the client resolves the shared dev user (no
+#   sign-in gate) and `requireUserId` (BASE44_PREVIEW_MODE=1) returns the dev
+#   user against the local dev database.
+# - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS / BASE44_PREVIEW_MODE are passed
+#   through from the platform environment.
+# With those keys unset (deployed / local docker run), behavior is unchanged.
+
+name: unibud-base44
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: unibud
+      POSTGRES_PASSWORD: unibud_dev_password
+      POSTGRES_DB: unibud
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unibud -d unibud"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    restart: on-failure
+
+  web:
+    image: node:22-bookworm-slim
+    working_dir: /app
+    env_file:
+      - /run/base44/app.env # platform-managed secrets (BETTER_AUTH_SECRET, …)
+    environment:
+      # Platform-supplied sandbox variables (passed through when present).
+      - BASE44_PREVIEW_MODE
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+      # Preview runs auth-off with the shared dev user (see header comment).
+      - VITE_AUTH_ENABLED=false
+      # Local dev database credentials — sandbox-local, never a real secret.
+      - DATABASE_URL=postgres://unibud:unibud_dev_password@db:5432/unibud
+    ports:
+      - "3000:8080"
+    volumes:
+      - .:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      - sh
+      - -ec
+      - |
+        # Install dependencies from the lockfile when they're missing or stale
+        # (node_modules lives in a named volume so it survives restarts).
+        if [ ! -f node_modules/.base44-install-ok ] || [ package-lock.json -nt node_modules/.base44-install-ok ]; then
+          npm ci --no-audit --no-fund --loglevel=error
+          touch node_modules/.base44-install-ok
+        fi
+        npm run db:migrate
+        exec npm run dev
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - node -e "fetch('http://127.0.0.1:8080/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      # First boot installs dependencies before the dev server starts.
+      start_period: 300s
+    restart: on-failure
+
+volumes:
+  db_data:
+  web_node_modules:

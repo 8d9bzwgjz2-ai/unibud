@@ -35,6 +35,7 @@ import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppSellRouteImport } from './routes/_app/sell'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSocialRouteImport } from './routes/_app/social'
+import { Route as AppSparkRouteImport } from './routes/_app/spark'
 import { Route as AppSpillRouteImport } from './routes/_app/spill'
 import { Route as AppStudiesRouteImport } from './routes/_app/studies'
 import { Route as AppTutorRouteImport } from './routes/_app/tutor'
@@ -185,6 +186,11 @@ const AppSocialRoute = AppSocialRouteImport.update({
   path: '/social',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSparkRoute = AppSparkRouteImport.update({
+  id: '/spark',
+  path: '/spark',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSpillRoute = AppSpillRouteImport.update({
   id: '/spill',
   path: '/spill',
@@ -313,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/sell': typeof AppSellRoute
   '/settings': typeof AppSettingsRoute
   '/social': typeof AppSocialRoute
+  '/spark': typeof AppSparkRoute
   '/spill': typeof AppSpillRouteWithChildren
   '/studies': typeof AppStudiesRoute
   '/tutor': typeof AppTutorRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/sell': typeof AppSellRoute
   '/settings': typeof AppSettingsRoute
   '/social': typeof AppSocialRoute
+  '/spark': typeof AppSparkRoute
   '/spill': typeof AppSpillRouteWithChildren
   '/studies': typeof AppStudiesRoute
   '/tutor': typeof AppTutorRoute
@@ -407,6 +415,7 @@ export interface FileRoutesById {
   '/_app/sell': typeof AppSellRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/social': typeof AppSocialRoute
+  '/_app/spark': typeof AppSparkRoute
   '/_app/spill': typeof AppSpillRouteWithChildren
   '/_app/studies': typeof AppStudiesRoute
   '/_app/tutor': typeof AppTutorRoute
@@ -457,6 +466,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/settings'
     | '/social'
+    | '/spark'
     | '/spill'
     | '/studies'
     | '/tutor'
@@ -502,6 +512,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/settings'
     | '/social'
+    | '/spark'
     | '/spill'
     | '/studies'
     | '/tutor'
@@ -550,6 +561,7 @@ export interface FileRouteTypes {
     | '/_app/sell'
     | '/_app/settings'
     | '/_app/social'
+    | '/_app/spark'
     | '/_app/spill'
     | '/_app/studies'
     | '/_app/tutor'
@@ -762,6 +774,13 @@ declare module '@tanstack/react-router' {
       path: '/social'
       fullPath: '/social'
       preLoaderRoute: typeof AppSocialRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/spark': {
+      id: '/_app/spark'
+      path: '/spark'
+      fullPath: '/spark'
+      preLoaderRoute: typeof AppSparkRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/spill': {
@@ -1021,6 +1040,7 @@ interface AppRouteChildren {
   AppSellRoute: typeof AppSellRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSocialRoute: typeof AppSocialRoute
+  AppSparkRoute: typeof AppSparkRoute
   AppSpillRoute: typeof AppSpillRouteWithChildren
   AppStudiesRoute: typeof AppStudiesRoute
   AppTutorRoute: typeof AppTutorRoute
@@ -1055,6 +1075,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSellRoute: AppSellRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSocialRoute: AppSocialRoute,
+  AppSparkRoute: AppSparkRoute,
   AppSpillRoute: AppSpillRouteWithChildren,
   AppStudiesRoute: AppStudiesRoute,
   AppTutorRoute: AppTutorRoute,

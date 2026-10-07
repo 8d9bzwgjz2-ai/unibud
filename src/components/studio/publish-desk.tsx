@@ -10,6 +10,7 @@ import { runExport } from "@/lib/studio/export/engine";
 import { useStudioStore } from "@/lib/studio/store";
 import type { PublishDest } from "@/lib/studio/types";
 import { originalFromPublish } from "@/lib/music/audio";
+import { toast } from "sonner";
 
 const DESTS: { id: PublishDest; label: string }[] = [
   { id: "square", label: "Square" },
@@ -155,7 +156,7 @@ export function PublishDesk() {
         );
       }
       await router.invalidate();
-      toast.success(intent === "reel" || dest === "peek" || intent === "peek" ? "On Peek." : dest === "story" ? "On your story." : "Dropped to Square.");
+      toast.success(intent === "reel" || dest === "peek" || intent === "peek" ? "On Peek." : "Dropped to Square.");
       clearProject();
       setComposeOpen(false);
       if (dest === "peek" || intent === "reel" || intent === "peek") sessionStorage.setItem("unibud-square-mode", "peek");

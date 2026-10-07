@@ -16,5 +16,6 @@ screenshots
 .pglite
 pglite-data
 .cache
+.tanstack
 coverage
 .vercel

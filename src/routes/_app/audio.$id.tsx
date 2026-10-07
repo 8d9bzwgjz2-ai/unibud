@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { personByHandle } from "@/lib/unibud/catalog";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { UnibudMusic } from "@/lib/music";
+import type { UnibudAudio } from "@/lib/music/audio";
 import { useStudioStore } from "@/lib/studio/store";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -17,9 +18,8 @@ function AudioPage() {
   const reportAudio = useCampusStore((s) => s.reportAudio);
   const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
   const localPosts = useCampusStore((s) => s.localPosts);
-  const audio = originals.find((a) => a.audioId === id);
-
-  if (!audio) {
+  const found = originals.find((a) => a.audioId === id);
+  if (!found) {
     return (
       <main className="px-5 py-10">
         <p className="text-sm text-muted-foreground">That audio isn’t on UNIBUD.</p>
@@ -29,6 +29,7 @@ function AudioPage() {
       </main>
     );
   }
+  const audio: UnibudAudio = found;
 
   const person = personByHandle(audio.creatorHandle ?? "");
   const uses = localPosts.filter((p) => p.audioId === audio.audioId || audio.usedBy.includes(p.id));

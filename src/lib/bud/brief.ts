@@ -92,8 +92,6 @@ function specialistNote(id: SpecialistId, prompt: string): string | null {
       return "Voice: keep sentences easy to say out loud.";
     case "navigator":
       return "Navigator: only real UNIBUD places. Square, Connect, Communities, Chat, Riff, Board, Studies, Watch, Market, Wallet, Profile.";
-    case "campus":
-      return "Campus: treat place as context, not the whole answer.";
     default:
       return null;
   }
