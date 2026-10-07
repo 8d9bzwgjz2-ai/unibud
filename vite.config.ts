@@ -1,0 +1,81 @@
+import { defineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { nitro } from "nitro/vite";
+// @ts-expect-error JS plugin alongside the TS vite config
+import { grokPwaPlugin } from "./scripts/grok-pwa-plugin.mjs";
+// @ts-expect-error JS plugin alongside the TS vite config
+import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
+
+/**
+ * Live-preview OAuth popup. Production uses the Netlify/TanStack runtime and
+ * does not depend on the preview database bootstrap.
+ */
+function authPopupPlugin() {
+  return {
+    name: "app-builder:auth-popup",
+    apply: "serve" as const,
+    configureServer(server: any) {
+      server.middlewares.use(async (req: any, res: any, next: any) => {
+        try {
+          const rawUrl = req.url ?? "";
+          const pathOnly = rawUrl.split("?", 1)[0] ?? "";
+          if (pathOnly !== "/auth/popup") {
+            next();
+            return;
+          }
+          if ((req.method ?? "GET").toUpperCase() !== "GET") {
+            res.statusCode = 405;
+            res.setHeader("content-type", "text/plain; charset=utf-8");
+            res.end("Method Not Allowed");
+            return;
+          }
+          const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? "localhost:8080");
+          const proto = String(req.headers["x-forwarded-proto"] ?? ((req.socket as { encrypted?: boolean } | undefined)?.encrypted ? "https" : "http"));
+          const requestHeaders = new Headers();
+          for (const [key, value] of Object.entries(req.headers)) {
+            if (value === undefined) continue;
+            if (Array.isArray(value)) for (const v of value) requestHeaders.append(key, v);
+            else requestHeaders.set(key, value as string);
+          }
+          if (!requestHeaders.has("host")) requestHeaders.set("host", host);
+          const request = new Request(`${proto}://${host}${rawUrl}`, { method: "GET", headers: requestHeaders });
+          const mod = (await server.ssrLoadModule("/src/lib/auth/popup.server.ts")) as {
+            handleAuthPopupRequest: (req: Request) => Promise<Response>;
+          };
+          const response = await mod.handleAuthPopupRequest(request);
+          res.statusCode = response.status;
+          const setCookies = typeof response.headers.getSetCookie === "function" ? response.headers.getSetCookie() : [];
+          response.headers.forEach((value, key) => {
+            if (key.toLowerCase() !== "set-cookie") res.setHeader(key, value);
+          });
+          for (const cookie of setCookies) res.appendHeader("set-cookie", cookie);
+          res.end(Buffer.from(await response.arrayBuffer()));
+        } catch (error) {
+          console.error("[app-builder] /auth/popup handler failed:", error);
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.setHeader("content-type", "text/plain; charset=utf-8");
+            res.end("auth popup failed");
+          }
+        }
+      });
+    },
+  };
+}
+
+export default defineConfig({
+  server: { host: "0.0.0.0", port: 8080, strictPort: true },
+  preview: { host: "127.0.0.1", port: 8081, strictPort: true },
+  resolve: { tsconfigPaths: true },
+  plugins: [
+    authPopupPlugin(),
+    appEnvPlugin(),
+    grokPwaPlugin(),
+    tailwindcss(),
+    tanstackStart(),
+    nitro({ serverDir: "./server" }),
+    viteReact(),
+  ],
+});
