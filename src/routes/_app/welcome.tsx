@@ -39,7 +39,10 @@ function Welcome() {
     setAcademicInterests(academic);
     setLifeStage(who);
     setOnboardingDone(true);
-    if (user) void upsertMyProfile({ data: { onboardingDone: true } });
+    if (user)
+      void upsertMyProfile({
+        data: { onboardingDone: true, displayName: user.displayName ?? undefined },
+      });
     void nav({ to: "/" });
   }
 

@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
+import { createFileRoute, Link, useLoaderData, useRouter } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Share2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/unibud/person";
@@ -12,7 +13,8 @@ import { useStudioStore } from "@/lib/studio/store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
 import { isVideoPost, likeKey, loopStream, postsForLane, SQUARE_LANES, type SquareLane } from "@/lib/unibud/square-stream";
-import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
+import { addSquareReply, getMyProfile, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
+import { deleteMyPost, editMyPost } from "@/lib/social/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
 
@@ -26,6 +28,13 @@ function Square() {
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
   const localPosts = useCampusStore((s) => s.localPosts);
+  const { user } = useCurrentUserState();
+  const myProfile = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: () => getMyProfile(),
+    enabled: Boolean(user),
+  });
+  const myHandle = myProfile.data?.handle;
   const following = useCampusStore((s) => s.following);
   const connections = useCampusStore((s) => s.connections);
   const interests = useCampusStore((s) => s.interests);
@@ -149,6 +158,7 @@ function Square() {
             discovery={lane === "off-rails" ? (catalog.discovery ?? []) : []}
             sentinel={sentinel}
             onOpenPeek={openPeek}
+            myHandle={myHandle}
           />
         </>
       )}
@@ -206,12 +216,14 @@ function LaneFeed({
   discovery,
   sentinel,
   onOpenPeek,
+  myHandle,
 }: {
   lane: SquareLane;
   stream: FeedPost[];
   discovery: DiscoveryItem[];
   sentinel: React.RefObject<HTMLDivElement | null>;
   onOpenPeek: (id: string) => void;
+  myHandle?: string;
 }) {
   if (!stream.length) {
     const copy =
@@ -235,7 +247,7 @@ function LaneFeed({
         return (
           <div key={p.id}>
             {showSpark && spark ? <DiscoveryCard item={spark} /> : null}
-            <FeedItem post={p} onOpenPeek={onOpenPeek} />
+            <FeedItem post={p} onOpenPeek={onOpenPeek} myHandle={myHandle} />
           </div>
         );
       })}
@@ -277,7 +289,12 @@ async function sharePost(post: FeedPost) {
   }
 }
 
-function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: string) => void }) {
+function FeedItem({ post, onOpenPeek, myHandle }: { post: FeedPost; onOpenPeek: (id: string) => void; myHandle?: string }) {
+  const router = useRouter();
+  const isMine = Boolean(myHandle) && post.authorHandle === myHandle;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(post.body);
+  const [saving, setSaving] = useState(false);
   const person = personByHandle(post.authorHandle);
   const community = communityById(post.communityId);
   const key = likeKey(post.id);
@@ -316,6 +333,32 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const name = person?.name ?? post.authorHandle;
   const isFollowed = following.includes(post.authorHandle);
   const audio = originals.find((a) => a.audioId === post.audioId || a.sourceContentId === key);
+
+  async function saveEdit() {
+    if (!draft.trim()) return;
+    setSaving(true);
+    try {
+      await editMyPost({ data: { postId: key, body: draft.trim() } });
+      setEditing(false);
+      void router.invalidate();
+      toast.success("Post updated.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update this post.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    try {
+      await deleteMyPost({ data: key });
+      hidePost(key);
+      void router.invalidate();
+      toast.success("Post deleted.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete this post.");
+    }
+  }
 
   return (
     <article className="border-b border-border px-5 py-4">
@@ -360,6 +403,30 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
               </button>
               {menu ? (
                 <div className="absolute top-9 right-0 z-10 w-44 rounded-xl bg-card p-1 ring-1 ring-border">
+                  {isMine ? (
+                    <>
+                      <button
+                        type="button"
+                        className="block w-full rounded-lg px-3 py-2 text-left text-xs"
+                        onClick={() => {
+                          setEditing(true);
+                          setMenu(false);
+                        }}
+                      >
+                        Edit post
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full rounded-lg px-3 py-2 text-left text-xs text-destructive"
+                        onClick={() => {
+                          setMenu(false);
+                          void remove();
+                        }}
+                      >
+                        Delete post
+                      </button>
+                    </>
+                  ) : null}
                   <button
                     type="button"
                     className="block w-full rounded-lg px-3 py-2 text-left text-xs"
@@ -410,7 +477,38 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
               ) : null}
             </div>
           </div>
-          <p className="mt-2 text-sm leading-relaxed">{post.body}</p>
+          {editing ? (
+            <div className="mt-2">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className="h-20 w-full rounded-2xl bg-secondary px-4 py-3 text-sm outline-none"
+                aria-label="Edit post"
+              />
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  disabled={saving || !draft.trim()}
+                  onClick={() => void saveEdit()}
+                  className="rounded-full bg-ink px-4 py-2 text-xs font-medium text-paper disabled:opacity-50"
+                >
+                  {saving ? "Saving…" : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(false);
+                    setDraft(post.body);
+                  }}
+                  className="rounded-full bg-secondary px-4 py-2 text-xs font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm leading-relaxed">{post.body}</p>
+          )}
           {audio ? (
             <Link
               to="/audio/$id"

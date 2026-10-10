@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
+import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PEOPLE, uniById } from "@/lib/unibud/catalog";
+import { PEOPLE, uniById, type DirectoryPerson } from "@/lib/unibud/catalog";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { academicLine, proximityScore, sharedContext } from "@/lib/unibud/identity";
+import { getMyPeopleState, listRealPeople, respondToConnection } from "@/lib/social/people.server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/connect")({ component: Connect });
@@ -14,6 +17,7 @@ export const Route = createFileRoute("/_app/connect")({ component: Connect });
 type Tab = "discover" | "requests" | "sent" | "connections" | "following" | "followers";
 
 function Connect() {
+  const { user, isPending } = useAuthReady();
   const [tab, setTab] = useState<Tab>("discover");
   const [q, setQ] = useState("");
   const incoming = useCampusStore((s) => s.incoming);
@@ -21,9 +25,10 @@ function Connect() {
   const connections = useCampusStore((s) => s.connections);
   const following = useCampusStore((s) => s.following);
   const followers = useCampusStore((s) => s.followers);
+  const blocked = useCampusStore((s) => s.blocked);
   const accept = useCampusStore((s) => s.accept);
   const decline = useCampusStore((s) => s.decline);
-  const cancelRequest = useCampusStore((s) => s.cancelRequest);
+  const setPeopleState = useCampusStore((s) => s.setPeopleState);
   const homeCampusId = useCampusStore((s) => s.homeCampusId);
   const faculty = useCampusStore((s) => s.faculty);
   const department = useCampusStore((s) => s.department);
@@ -35,30 +40,94 @@ function Connect() {
     department,
   };
 
+  // Verified per-account relationship state (follows, requests, connections).
+  const state = useQuery({
+    queryKey: ["people-state"],
+    queryFn: () => getMyPeopleState(),
+    enabled: Boolean(user),
+  });
+  useEffect(() => {
+    if (state.data) setPeopleState(state.data);
+  }, [state.data, setPeopleState]);
+
+  // Real student accounts on UNIBUD (other verified users).
+  const real = useQuery({
+    queryKey: ["real-people", q.trim().toLowerCase()],
+    queryFn: () => listRealPeople({ data: q.trim().toLowerCase() }),
+    enabled: Boolean(user),
+  });
+
+  // Real profiles render exactly like directory people; seeded personas stay as
+  // extra demo voices (they have no account behind them, so their buttons run
+  // the store-only demo path).
+  const realPeople: DirectoryPerson[] = (real.data ?? []).map((p) => ({
+    handle: p.handle,
+    name: p.name,
+    universityId: p.universityId,
+    program: p.program,
+    year: p.year,
+    bio: p.bio,
+    verified: false,
+  }));
+  const realHandles = new Set(realPeople.map((p) => p.handle));
+  const people = useMemo(
+    () => [...realPeople, ...PEOPLE.filter((p) => !realHandles.has(p.handle))],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [realPeople],
+  );
+
   const filtered = useMemo(
     () =>
-      PEOPLE.filter((p) => {
+      people.filter((p) => {
         const hay = `${p.name} ${p.handle} ${p.program} ${p.year} ${p.universityId} ${p.faculty ?? ""} ${p.department ?? ""}`.toLowerCase();
         return !q.trim() || hay.includes(q.toLowerCase());
       }),
-    [q],
+    [people, q],
   );
 
-  const list =
+  const list = (
     tab === "requests"
-      ? PEOPLE.filter((p) => incoming.includes(p.handle))
+      ? people.filter((p) => incoming.includes(p.handle))
       : tab === "sent"
-        ? PEOPLE.filter((p) => outgoing.includes(p.handle))
+        ? people.filter((p) => outgoing.includes(p.handle))
         : tab === "connections"
-          ? PEOPLE.filter((p) => connections.includes(p.handle))
+          ? people.filter((p) => connections.includes(p.handle))
           : tab === "following"
-            ? PEOPLE.filter((p) => following.includes(p.handle))
+            ? people.filter((p) => following.includes(p.handle))
             : tab === "followers"
-              ? PEOPLE.filter((p) => followers.includes(p.handle))
-              : filtered;
+              ? people.filter((p) => followers.includes(p.handle))
+              : filtered
+  ).filter((p) => !blocked.includes(p.handle));
 
-  const suggested = [...filtered].sort((a, b) => proximityScore(b, connections, lens) - proximityScore(a, connections, lens));
+  const suggested = [...filtered].sort(
+    (a, b) => proximityScore(b, connections, lens) - proximityScore(a, connections, lens),
+  );
   const shown = tab === "discover" ? suggested : list;
+
+  async function respond(handle: string, ok: boolean) {
+    try {
+      await respondToConnection({ data: { handle, accept: ok } });
+      setPeopleState(await getMyPeopleState());
+    } catch {
+      /* the optimistic store update still applies for demo personas */
+    }
+  }
+
+  if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
+  if (!user) {
+    return (
+      <main className="px-5 py-8">
+        <p className="kicker">People</p>
+        <h1 className="mt-1 font-display text-4xl">Connect</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Follows, requests and connections belong to your account.
+        </p>
+        <div className="mt-6">
+          <SignInCard title="Sign in to connect" body="Real follows and requests live on your account, not this device." />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="safe-bottom px-5 pt-6">
@@ -111,8 +180,8 @@ function Connect() {
           <p className="kicker text-bud">People you may never have met</p>
           <h2 className="mt-3 font-display text-3xl text-paper">Same interests beat same postcode.</h2>
           <p className="mt-3 text-sm text-paper/70">
-            Robotics in Nairobi. Physics in Johannesburg. Language exchange. Builders, players, and
-            people who like the same strange things you like.
+            Every profile here is a real UNIBUD account — follow, request a connection, or message
+            them and it happens on their side too.
           </p>
         </section>
       ) : null}
@@ -139,7 +208,7 @@ function Connect() {
                 <Link to="/u/$handle" params={{ handle: p.handle }} className="min-w-0 flex-1">
                   <PersonMeta person={p} compact />
                   <p className="truncate text-xs text-muted-foreground">
-                    {uni?.shortName} · {academicLine(p)}
+                    {uni?.shortName ?? p.universityId.toUpperCase()} · {academicLine(p)}
                   </p>
                   {ctx.items.length ? (
                     <p className="text-[11px] text-muted-foreground">{ctx.items.join(" · ")}</p>
@@ -154,17 +223,13 @@ function Connect() {
               <div className="mt-3">
                 {tab === "requests" ? (
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => accept(p.handle)}>
+                    <Button size="sm" onClick={() => { accept(p.handle); void respond(p.handle, true); }}>
                       Accept
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => decline(p.handle)}>
+                    <Button size="sm" variant="outline" onClick={() => { decline(p.handle); void respond(p.handle, false); }}>
                       Decline
                     </Button>
                   </div>
-                ) : tab === "sent" ? (
-                  <Button size="sm" variant="outline" onClick={() => cancelRequest(p.handle)}>
-                    Pending · Cancel
-                  </Button>
                 ) : (
                   <RelationActions handle={p.handle} />
                 )}

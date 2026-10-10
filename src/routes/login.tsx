@@ -118,29 +118,39 @@ function Login() {
         </p>
 
         {authEnabled ? (
-          <div className="mt-8 space-y-3">
-            {GROK_PROVIDERS.map((p) => (
-              <Button
-                key={p.providerId}
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => signIn(p.providerId, { callbackURL: "/welcome" })}
-              >
-                <ProviderMark id={p.providerId} />
-                Continue with {p.label}
-              </Button>
-            ))}
-          </div>
+          // The federated broker is deployed-only; staging (VITE_AUTH_BROKER=false)
+          // signs in with this app's own email/password accounts.
+          import.meta.env.VITE_AUTH_BROKER === "false" ? (
+            <p className="mt-6 text-sm text-muted-foreground">
+              Sign in with your UNIBUD email and password.
+            </p>
+          ) : (
+            <div className="mt-8 space-y-3">
+              {GROK_PROVIDERS.map((p) => (
+                <Button
+                  key={p.providerId}
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => signIn(p.providerId, { callbackURL: "/welcome" })}
+                >
+                  <ProviderMark id={p.providerId} />
+                  Continue with {p.label}
+                </Button>
+              ))}
+            </div>
+          )
         ) : (
           <p className="mt-6 text-sm text-muted-foreground">Sign-in is disabled.</p>
         )}
 
-        <div className="my-8 flex items-center gap-3 text-xs tracking-wide text-muted-foreground uppercase">
-          <span className="h-px flex-1 bg-border" />
-          or email
-          <span className="h-px flex-1 bg-border" />
-        </div>
+        {import.meta.env.VITE_AUTH_BROKER === "false" ? null : (
+          <div className="my-8 flex items-center gap-3 text-xs tracking-wide text-muted-foreground uppercase">
+            <span className="h-px flex-1 bg-border" />
+            or email
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        )}
 
         <div className="mb-4 flex gap-2">
           <button

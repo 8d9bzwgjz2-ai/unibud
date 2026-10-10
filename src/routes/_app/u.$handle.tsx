@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { BadgeCheck } from "lucide-react";
 import { Avatar } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
-import { personByHandle, uniById, COMMUNITIES, POSTS } from "@/lib/unibud/catalog";
+import { getProfileByHandle } from "@/lib/social/people.server";
+import { personByHandle, uniById, COMMUNITIES, POSTS, type DirectoryPerson } from "@/lib/unibud/catalog";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { roleLabel } from "@/lib/unibud/roles";
 import { academicLine, canViewAcademic, sharedContext, type CampusLens } from "@/lib/unibud/identity";
@@ -15,7 +17,23 @@ export const Route = createFileRoute("/_app/u/$handle")({ component: PublicProfi
 
 function PublicProfile() {
   const { handle } = Route.useParams();
-  const person = personByHandle(handle);
+  // Real account profile (server) — seeded personas fall back to the catalog.
+  const real = useQuery({
+    queryKey: ["public-profile", handle],
+    queryFn: () => getProfileByHandle({ data: handle }),
+  });
+  const realPerson: DirectoryPerson | null = real.data
+    ? {
+        handle: real.data.handle,
+        name: real.data.name,
+        universityId: real.data.universityId,
+        program: real.data.program,
+        year: real.data.year,
+        bio: real.data.bio,
+        verified: false,
+      }
+    : null;
+  const person = personByHandle(handle) ?? realPerson;
   const connections = useCampusStore((s) => s.connections);
   const following = useCampusStore((s) => s.following);
   const homeCampusId = useCampusStore((s) => s.homeCampusId);

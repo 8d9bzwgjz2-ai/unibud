@@ -4,12 +4,16 @@
 # on container port 8080, mapped to host port 3000 for the preview proxy) plus
 # a local PostgreSQL for the Kysely/Better Auth schema (migrations/).
 #
-# Sandbox-only preview behavior:
-# - VITE_AUTH_ENABLED=false: the client resolves the shared dev user (no
-#   sign-in gate) and `requireUserId` (BASE44_PREVIEW_MODE=1) returns the dev
-#   user against the local dev database.
-# - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS / BASE44_PREVIEW_MODE are passed
-#   through from the platform environment.
+# Staging-preview behavior (real personal accounts):
+# - VITE_AUTH_ENABLED=true: every visitor signs in with their own account
+#   (Better Auth email/password at same-origin /api/auth/*, persisted in the
+#   local Postgres). No shared dev user.
+# - BETTER_AUTH_URL: the preview's public origin, so Better Auth's CSRF origin
+#   allowlist matches the browser's Origin header. Resolved from the platform
+#   env at `up` time; never hardcode a value.
+# - VITE_AUTH_BROKER=false: hides the deployed-only federated sign-in buttons
+#   (the Grok broker does not accept this host's OAuth callbacks); email and
+#   password remain fully functional.
 # With those keys unset (deployed / local docker run), behavior is unchanged.
 
 name: unibud-base44
@@ -40,8 +44,10 @@ services:
       # Platform-supplied sandbox variables (passed through when present).
       - BASE44_PREVIEW_MODE
       - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
-      # Preview runs auth-off with the shared dev user (see header comment).
-      - VITE_AUTH_ENABLED=false
+      # Staging preview runs REAL personal accounts (see header comment).
+      - VITE_AUTH_ENABLED=true
+      - VITE_AUTH_BROKER=false
+      - BETTER_AUTH_URL=https://3000-${BASE44_PUBLIC_HOST_SUFFIX}
       # Local dev database credentials — sandbox-local, never a real secret.
       - DATABASE_URL=postgres://unibud:unibud_dev_password@db:5432/unibud
     ports:

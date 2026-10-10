@@ -82,6 +82,7 @@ type CampusState = {
   connections: string[];
   incoming: string[];
   outgoing: string[];
+  blocked: string[];
   recentSearches: string[];
   localPosts: LocalPost[];
   myStories: LocalStory[];
@@ -139,6 +140,15 @@ type CampusState = {
   request: (handle: string) => void;
   cancelRequest: (handle: string) => void;
   unconnect: (handle: string) => void;
+  /** Replace the relationship lists with the server's verified state. */
+  setPeopleState: (p: {
+    following?: string[];
+    followers?: string[];
+    connections?: string[];
+    incoming?: string[];
+    outgoing?: string[];
+    blocked?: string[];
+  }) => void;
   addSearch: (q: string) => void;
   clearSearches: () => void;
   removeSearch: (q: string) => void;
@@ -273,11 +283,14 @@ export const useCampusStore = create<CampusState>()(
     (set) => ({
       liked: {},
       likeCounts: { p1: 28, p2: 14, p3: 41, p5: 63, p8: 9, sp1: 22, sp3: 31, sp6: 18 },
-      following: ["amaka", "adaeze"],
-      followers: ["tunde", "kemi"],
-      connections: ["amaka", "tunde"],
-      incoming: ["chinedu", "kemi", "fatima"],
-      outgoing: ["ibrahim"],
+      // Relationships live server-side per account now; these start empty and
+      // are hydrated from `getMyPeopleState` (see `setPeopleState`).
+      following: [],
+      followers: [],
+      connections: [],
+      incoming: [],
+      outgoing: [],
+      blocked: [],
       recentSearches: ["architecture society", "faculty night", "Adaeze Okonkwo"],
       localPosts: [],
       myStories: [],
@@ -356,6 +369,15 @@ export const useCampusStore = create<CampusState>()(
         set((s) => ({ outgoing: s.outgoing.filter((h) => h !== handle) })),
       unconnect: (handle) =>
         set((s) => ({ connections: s.connections.filter((h) => h !== handle) })),
+      setPeopleState: (p) =>
+        set((s) => ({
+          following: p.following ?? s.following,
+          followers: p.followers ?? s.followers,
+          connections: p.connections ?? s.connections,
+          incoming: p.incoming ?? s.incoming,
+          outgoing: p.outgoing ?? s.outgoing,
+          blocked: p.blocked ?? s.blocked,
+        })),
       addSearch: (q) =>
         set((s) => {
           const t = q.trim();
