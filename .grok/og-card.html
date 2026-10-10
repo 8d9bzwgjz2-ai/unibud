@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1200px; height: 630px; overflow: hidden; background: #0B0C0F; }
+    .card {
+      position: relative;
+      width: 1200px;
+      height: 630px;
+      background:
+        radial-gradient(ellipse 70% 55% at 50% 112%, rgba(46, 201, 183, 0.10) 0%, transparent 58%),
+        radial-gradient(ellipse 90% 70% at 50% 120%, #14151A 0%, #0B0C0F 62%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Outfit, "Liberation Sans", "DejaVu Sans", sans-serif;
+    }
+    .lockup {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+    .mark { display: block; }
+    .word {
+      color: #F2F0EB;
+      font-weight: 700;
+      font-size: 108px;
+      letter-spacing: 0.26em;
+      line-height: 1;
+      padding-left: 0.26em; /* optical center with tracking */
+      text-transform: uppercase;
+    }
+    .rule {
+      width: 132px;
+      height: 2px;
+      background: #2EC9B7;
+      border-radius: 1px;
+      margin-top: -4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="lockup">
+      <svg class="mark" width="72" height="72" viewBox="0 0 32 32" aria-hidden="true">
+        <path fill="#2EC9B7" d="M15.1 16.2v7.6a.9.9 0 0 0 1.8 0v-7.6z"/>
+        <ellipse cx="12.4" cy="13.6" rx="4.1" ry="5.3" transform="rotate(-34 12.4 13.6)" fill="#2EC9B7"/>
+        <ellipse cx="19.7" cy="12.3" rx="3.5" ry="4.7" transform="rotate(36 19.7 12.3)" fill="#2EC9B7"/>
+      </svg>
+      <div class="word">UNIBUD</div>
+      <div class="rule"></div>
+    </div>
+  </div>
+</body>
+</html>

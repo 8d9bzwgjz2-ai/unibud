@@ -1,0 +1,23 @@
+# Netlify build configuration for UNIBUD (TanStack Start + Nitro).
+# Nitro emits the static client into dist/ and the SSR handler into
+# .netlify/functions-internal/. Netlify serves the handler automatically.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Keep production explicit so the main branch is the deployable app.
+[context.production]
+  command = "npm run build"
+  publish = "dist"
+  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
+
+# PR previews use the same production build/runtime shape. Secrets are still
+# supplied by Netlify and are never committed to this repository.
+[context.deploy-preview]
+  command = "npm run build"
+  publish = "dist"
+  environment = { NODE_VERSION = "22", NODE_ENV = "production" }

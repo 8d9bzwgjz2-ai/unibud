@@ -1,0 +1,11 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "BETTER_AUTH_SECRET",
+      "description": "Better Auth session signing secret. Optional in the sandbox (a process-stable fallback secret is generated when unset); required for deployed sign-in."
+    }
+  ]
+}
