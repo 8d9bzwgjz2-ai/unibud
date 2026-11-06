@@ -18,17 +18,32 @@ services:
     labels:
       base44.kind: infra
 
-  api:
-    image: node:22-bookworm-slim
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.base44
     working_dir: /app
-    command: ["sh", "-ec", "npm ci --no-audit --no-fund && exec npm run dev"]
+    command:
+      - sh
+      - -ec
+      - npm run db:migrate && exec npm run dev
+    env_file:
+      - /run/base44/app.env
     environment:
+      # Local infrastructure credential (not a user secret).
       DATABASE_URL: postgres://unibud:unibud_dev_pw@db:5432/unibud
-      PORT: "3001"
       NODE_ENV: development
+      # Sandbox preview support only; unset outside the sandbox.
+      BASE44_PREVIEW_MODE: ${BASE44_PREVIEW_MODE:-}
+      BASE44_PUBLIC_HOST_SUFFIX: ${BASE44_PUBLIC_HOST_SUFFIX:-}
+      BASE44_SANDBOX_HOST_DOMAIN: ${BASE44_SANDBOX_HOST_DOMAIN:-}
+      # Vite >= 6.1 appends this to `server.allowedHosts`; the platform sets it.
+      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: ${__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS:-}
     volumes:
-      - ./server:/app
-      - api-modules:/app/node_modules
+      - ./:/app
+      - app-modules:/app/node_modules
+    ports:
+      - "3000:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -36,46 +51,12 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+          "node -e \"fetch('http://127.0.0.1:8080/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
         ]
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 6
-      start_period: 30s
-    restart: on-failure
-    labels:
-      base44.project: UNIBUD
-      base44.kind: api
-
-  web:
-    image: node:22-bookworm-slim
-    working_dir: /app
-    command:
-      ["sh", "-ec", "npm ci --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0 --port 3000"]
-    environment:
-      API_URL: http://api:3001
-      # Sandbox preview support only; unset outside the sandbox.
-      BASE44_PREVIEW_MODE: ${BASE44_PREVIEW_MODE:-}
-      BASE44_SANDBOX_HOST_DOMAIN: ${BASE44_SANDBOX_HOST_DOMAIN:-}
-      BASE44_PUBLIC_HOST_SUFFIX: ${BASE44_PUBLIC_HOST_SUFFIX:-}
-    volumes:
-      - ./web:/app
-      - web-modules:/app/node_modules
-    ports:
-      - "3000:3000"
-    depends_on:
-      api:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 40s
+      retries: 8
+      start_period: 90s
     restart: on-failure
     labels:
       base44.project: UNIBUD
@@ -84,5 +65,4 @@ services:
 
 volumes:
   db-data:
-  api-modules:
-  web-modules:
+  app-modules:

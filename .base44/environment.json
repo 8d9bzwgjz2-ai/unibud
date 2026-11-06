@@ -1,6 +1,12 @@
 {
   "previewPort": 3000,
-  "healthPath": "/api/health",
-  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
-  "secrets": []
+  "healthPath": "/login",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d --build",
+  "secrets": [
+    {
+      "name": "BETTER_AUTH_SECRET",
+      "description": "Signing secret for Better Auth sessions. Optional locally — the app mints a per-process secret when it is unset, so sessions end on restart.",
+      "requiredAtBoot": false
+    }
+  ]
 }

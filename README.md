@@ -1,65 +1,41 @@
 # UNIBUD
 
-A connected digital world for students, young people, creators and communities. This repository
-is the first working slice of that platform: **Chat**, **LYNC** and **one central notification
-system**, built on persistent data.
+A connected digital world for students, young people, creators and communities —
+Square, Connect, Bud, Riff, Studies, Studio, Flow, Board, SouLync, Wayward and the
+Quarter in one phone-first app.
 
-## What works today
+This repository is the integrated UNIBUD app: a TanStack Start (React 19 + Vite)
+front end with its own Better Auth accounts and a Postgres database. Behaviour
+comes from the platform overviews and the integration note in
+`docs/unibud-integration.md`; destinations that are not really connected say so
+rather than inventing people, posts, orders or payments.
 
-**Chat** — direct and group conversations, conversation history, delivery and read states, unread
-counts, search and unread filtering. Messages are stored, not simulated.
-
-**LYNC** — the conversation streak. A day counts only when at least two members spoke, so streaks
-reward genuine two-way conversation. Levels (Ember → Flame → Beacon → Constellation → Aurora →
-Eclipse), best streak, a seven-day activity strip, copyable achievements, milestone notifications
-fired exactly once, and a single friendly reminder when a streak goes quiet.
-
-**Notifications** — one inbox for the whole platform. Every notification carries its source
-(Chat, LYNC, UNIBUD), a category, and the exact destination to open. Preferences per category stop
-alerts being created at all.
-
-Square, Connect, Quad, Wayward, SouLync, Riff, Board, Flow, The Quarter, The Fixer, Concierge,
-Pockets and Bud are described in the platform overview and are not part of this slice.
-
-## Stack
-
-- `web/` — React 18, Vite 6, Tailwind, React Router. Newsreader headings, Inter body, paper and
-  ink palette with restrained champagne accents.
-- `server/` — Node 22, Express, `pg`, cookie sessions (httpOnly, 30 days), bcrypt passwords.
-- Postgres 16, schema in `server/migrations`, applied automatically on boot.
-
-## Run locally
+## Run
 
 ```bash
 docker compose -f docker-compose.base44.yml up -d --build
 ```
 
-Open <http://localhost:3000>. The API is served through the Vite dev proxy on the same origin, so
-the session cookie is first-party.
+Open <http://localhost:3000>.
 
-### Demo members
+- `web` — Vite dev server (`npm run dev`) on `0.0.0.0:8080` → host port 3000.
+  Source is bind-mounted, so edits hot-reload.
+- `db` — Postgres 16. `npm run db:migrate` applies `migrations/*.sql` before the
+  dev server starts.
 
-Seeded on first boot by `server/src/seed.js`:
+## Accounts
 
-| Member | Email | Password |
-| --- | --- | --- |
-| Amara Okoye | `amara@unibud.app` | `unibud` |
-| Zara Bello | `zara@unibud.app` | `unibud` |
-| Tobi Adeyemi | `tobi@unibud.app` | `unibud` |
-| Kwame Mensah | `kwame@unibud.app` | `unibud` |
-| Imani Cole | `imani@unibud.app` | `unibud` |
+UNIBUD sign-in is email and password only. There is no guest entry and no social
+sign-in. Create an account at `/join`: a six-digit code verifies it, then profile
+setup finishes before Home. With no mail provider configured the code is shown on
+the device instead of being emailed.
 
-These are review identities, not production accounts.
+## Stack
 
-## Design principles from the spec
+- `src/` — routes (`src/routes`), components, and server functions.
+- `migrations/` — schema source of truth, applied by `scripts/migrate.mjs`.
+- `src/lib/auth/` — pre-wired Better Auth (email/password enabled in
+  `email-password.ts`).
+- `scripts/` — dev env wrapper, migrator, preview/browser smoke helpers.
 
-- Phone-first; headings in Newsreader, body in Inter.
-- Black and white as the main palette, champagne used only for emphasis (streaks, unread marks).
-- No unnecessary loading screens; the navigation retracts while reading and returns on scroll up.
-- One notification space, always labelled with its source and always opening the exact place the
-  event happened.
-
-## Repository notes
-
-The two uploaded archives (`UNIBUD-Base44-Full.zip`, `UNIBUD-Base44-Patch.zip`) are earlier
-handoff bundles and are not used by the running app.
+Setup details and sharp edges are in `AGENTS.md`.
