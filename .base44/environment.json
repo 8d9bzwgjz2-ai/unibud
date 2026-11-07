@@ -1,0 +1,12 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "BETTER_AUTH_SECRET",
+      "description": "Signs Better Auth sessions. Any long random string; generate with `openssl rand -hex 32`.",
+      "requiredAtBoot": true
+    }
+  ]
+}
