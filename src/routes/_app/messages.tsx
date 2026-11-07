@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Avatar } from "@/components/unibud/person";
+import { ProductLockup } from "@/components/brand/product-mark";
 import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { PEOPLE, personByHandle } from "@/lib/unibud/catalog";
@@ -28,8 +29,7 @@ function ChatList() {
   if (!user) {
     return (
       <main className="px-5 py-8">
-        <p className="kicker">Messages</p>
-        <h1 className="mt-1 font-display text-4xl">Chat</h1>
+        <ProductLockup product="chat" />
         <div className="mt-6">
           <SignInCard title="Sign in to chat" body="Direct, class, study and community conversations stay private." />
         </div>
@@ -46,9 +46,8 @@ function ChatList() {
 
   return (
     <main className="safe-bottom px-5 pt-6">
-      <p className="kicker">Communication layer</p>
-      <h1 className="mt-1 font-display text-4xl">Chat</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <ProductLockup product="chat" />
+      <p className="mt-3 text-sm text-muted-foreground">
         Direct messages, group, class, study and community conversations. Chat is not Connect, not Communities, not Board.
       </p>
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">

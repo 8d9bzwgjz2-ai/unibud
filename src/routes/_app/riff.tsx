@@ -3,6 +3,7 @@ import { Bookmark, Flag, Heart, MessageCircle, Repeat2, Sparkles } from "lucide-
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
+import { ProductLockup } from "@/components/brand/product-mark";
 import { Button } from "@/components/ui/button";
 import { communityById, personByHandle } from "@/lib/unibud/catalog";
 import { relativeTime } from "@/lib/unibud/format";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { SpillPost } from "@/lib/unibud/spill-data";
 import { CHALLENGES } from "@/lib/unibud/discover-data";
 import { setBudDraft } from "@/lib/bud/draft";
+import { riffAssist } from "@/lib/riff/ai";
 
 export const Route = createFileRoute("/_app/riff")({ component: Riff });
 
@@ -26,6 +28,8 @@ function Riff() {
   const [draft, setDraft] = useState("");
   const [quoting, setQuoting] = useState<string | null>(null);
   const [topic, setTopic] = useState<(typeof TOPICS)[number]>("all");
+  const [assist, setAssist] = useState<"polish" | "angle" | "reply" | null>(null);
+  const [assistError, setAssistError] = useState<string | null>(null);
 
   const list = useMemo(() => {
     const base = spills.filter((s) => !flagged.includes(s.id));
@@ -34,12 +38,28 @@ function Riff() {
     return base.filter((s) => `${s.body} ${s.communityId ?? ""}`.toLowerCase().includes(needle));
   }, [spills, flagged, topic]);
 
+  async function runAssist(mode: "polish" | "angle" | "reply") {
+    if (!draft.trim() || assist) return;
+    setAssist(mode);
+    setAssistError(null);
+    try {
+      const result = await riffAssist({
+        data: { draft: draft.trim(), mode, thread: list.slice(0, 4).map((s) => s.body) },
+      });
+      if (result.ok) setDraft(result.text);
+      else setAssistError(result.error);
+    } catch {
+      setAssistError("Bud couldn’t reach its AI core just now. Try again.");
+    } finally {
+      setAssist(null);
+    }
+  }
+
   return (
     <main className="safe-bottom bg-card">
       <header className="px-5 pt-6">
-        <p className="kicker">Conversation</p>
-        <h1 className="mt-1 font-display text-4xl">Riff</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <ProductLockup product="riff" />
+        <p className="mt-3 text-sm text-muted-foreground">
           Short posts that can become a whole conversation. Not Square. Not Chat. Not a profile tab.
         </p>
       </header>
@@ -99,11 +119,30 @@ function Riff() {
             placeholder="Start a Riff."
             className="min-h-20 w-full resize-none bg-transparent text-sm outline-none"
           />
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="size-3.5 text-muted-foreground" />
+              {(["polish", "angle", "reply"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => void runAssist(mode)}
+                  disabled={!draft.trim() || assist !== null}
+                  className="rounded-full bg-secondary px-2.5 py-1 text-[11px] capitalize disabled:opacity-50"
+                >
+                  {assist === mode ? "Working…" : mode}
+                </button>
+              ))}
+            </div>
             <Button type="submit" size="sm" disabled={!draft.trim()}>
               Drop
             </Button>
           </div>
+          {assistError ? (
+            <p role="alert" className="mt-2 text-xs text-destructive">
+              {assistError}
+            </p>
+          ) : null}
         </form>
       ) : (
         <p className="mt-4 px-5 text-sm text-muted-foreground">Sign in to drop a Riff. You can still read.</p>

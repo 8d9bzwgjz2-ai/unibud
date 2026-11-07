@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ProductLockup } from "@/components/brand/product-mark";
 import { Input } from "@/components/ui/input";
 import { COMMUNITIES } from "@/lib/unibud/catalog";
 import { useCatalog } from "@/lib/unibud/queries";
@@ -56,11 +57,10 @@ function CommunitiesList() {
 
   return (
     <main className="safe-bottom px-5 pt-6">
-      <p className="kicker">Find your people</p>
-      <h1 className="mt-1 font-display text-4xl">Communities</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Structured shared spaces. Class groups are academic cohorts. Study groups are student-run.
-        Chat lives in Chat — a community is not a thread.
+      <ProductLockup product="quad" />
+      <p className="mt-3 text-sm text-muted-foreground">
+        Structured shared spaces — class cohorts, faculties, study groups and interests.
+        Chat lives in Chat; a community is not a thread.
       </p>
       <div className="relative mt-5">
         <Search className="pointer-events-none absolute top-3.5 left-4 size-4 text-muted-foreground" />

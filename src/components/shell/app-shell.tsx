@@ -1,15 +1,20 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Bell, Search } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { AskBudFab } from "@/components/unibud/ask-bud";
 import { DropSheet } from "@/components/unibud/drop-sheet";
-import { StudioRoot } from "@/components/studio/studio-root";
 import { cn } from "@/lib/utils";
 import { unreadCount, useCampusStore } from "@/lib/unibud/campus-store";
 import { PrimaryNav } from "./primary-nav";
 import { SideMenu } from "./side-menu";
 import { useRightDrawer } from "./use-right-drawer";
+
+// The studio (camera, mixer, editors) is a large surface only opened from the
+// composer, so it loads on demand instead of inside every first paint.
+const StudioRoot = lazy(() =>
+  import("@/components/studio/studio-root").then((mod) => ({ default: mod.StudioRoot })),
+);
 
 export function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -105,7 +110,11 @@ export function AppShell() {
 
       <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} />
       {dropOpen ? <DropSheet onClose={() => setDropOpen(false)} /> : null}
-      <StudioRoot />
+      {composeOpen ? (
+        <Suspense fallback={null}>
+          <StudioRoot />
+        </Suspense>
+      ) : null}
 
       <SideMenu
         open={drawer.open}

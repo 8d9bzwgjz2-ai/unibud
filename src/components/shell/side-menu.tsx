@@ -6,6 +6,7 @@ import {
   CircleUser,
   Clapperboard,
   ExternalLink,
+  Heart,
   LogOut,
   Megaphone,
   MessageSquareText,
@@ -13,9 +14,10 @@ import {
   Search,
   Settings,
   Sparkles,
+  Store,
+  Wallet,
   Wrench,
 } from "lucide-react";
-import { Wordmark } from "@/components/brand/logo";
 import { Avatar } from "@/components/unibud/person";
 import { SignedIn, SignedOut } from "@/lib/auth/gates";
 import { authEnabled, signOut } from "@/lib/auth/client";
@@ -28,7 +30,10 @@ const items = [
   { to: "/profile", label: "Profile", icon: CircleUser },
   { to: "/messages", label: "Chat", icon: MessageSquareText },
   { to: "/bud", label: "Bud", icon: Sparkles },
+  { to: "/money", label: "Flow", icon: Wallet },
+  { to: "/market", label: "The Quarter", icon: Store },
   { to: "/riff", label: "Riff", icon: Megaphone },
+  { to: "/soulync", label: "SouLync", icon: Heart },
   { to: "/search", label: "Search", icon: Search },
   { to: "/board", label: "Board", icon: Clapperboard },
   { to: "/studies", label: "Studies", icon: BookOpen },
@@ -101,7 +106,7 @@ export function SideMenu({
         onPointerCancel={onPointerUp}
       >
         <div className="px-1">
-          <Wordmark size="md" />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">Menu</p>
         </div>
         <div className="mt-6 flex items-center gap-3 rounded-2xl bg-card p-3 ring-1 ring-border">
           {isPending ? (

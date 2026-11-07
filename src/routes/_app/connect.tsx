@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
 import { Button } from "@/components/ui/button";
+import { ProductLockup } from "@/components/brand/product-mark";
 import { Input } from "@/components/ui/input";
 import { PEOPLE, uniById } from "@/lib/unibud/catalog";
 import { useCampusStore } from "@/lib/unibud/campus-store";
@@ -62,8 +63,7 @@ function Connect() {
 
   return (
     <main className="safe-bottom px-5 pt-6">
-      <p className="kicker">People</p>
-      <h1 className="mt-1 font-display text-4xl">Connect</h1>
+      <ProductLockup product="connect" />
       <p className="mt-2 text-sm text-muted-foreground">
         Find people you would not normally meet — same interests, other cities, other schools.
         Connect is mutual. Follow is one-way.

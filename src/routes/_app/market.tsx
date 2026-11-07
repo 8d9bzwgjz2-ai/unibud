@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ProductLockup } from "@/components/brand/product-mark";
 import { ListingCard } from "@/components/unibud/listing-card";
 import { CATEGORIES } from "@/lib/unibud/catalog";
 import type { ListingCategory } from "@/lib/unibud/types";
@@ -38,12 +39,7 @@ function Market() {
   return (
     <main className="px-4 pb-8 md:px-6">
       <div className="flex items-end justify-between gap-3 pt-2">
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            Marketplace
-          </p>
-          <h1 className="mt-1 text-2xl font-medium tracking-tight">Market</h1>
-        </div>
+        <ProductLockup product="quarter" />
         <Button size="sm" onClick={() => setSellOpen(true)}>
           Sell / offer
         </Button>

@@ -22,6 +22,7 @@ import {
 } from "@/lib/money/server";
 import { cn } from "@/lib/utils";
 import { BudNudge } from "@/components/unibud/bud-nudge";
+import { ProductLockup } from "@/components/brand/product-mark";
 import type { RequestStatus } from "@/lib/unibud/types";
 
 export const Route = createFileRoute("/_app/money")({
@@ -64,10 +65,10 @@ function Money() {
 
   return (
     <main className="px-4 pb-10 md:px-6">
-      <p className="pt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        Wallet
-      </p>
-      <h1 className="mt-1 text-2xl font-medium tracking-tight">Your pocket</h1>
+      <div className="pt-4">
+        <ProductLockup product="flow" />
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">Your pocket — clearly marked demo ledger.</p>
       <div className="mt-4 flex gap-2">
         {[
           ["wallet", "Wallet"],

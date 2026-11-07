@@ -12,6 +12,8 @@ import { routeSpecialists, sparkSystemNotes } from "./spark";
 import { createActivitySink } from "@/lib/agents/activity";
 import { executeSpecialists } from "@/lib/agents/runtime";
 import type { AgentInput } from "@/lib/agents/contracts";
+import { trimHistory } from "@/lib/ai/context";
+import { AI_QUOTA_COPY, aiCallsToday, dailyAiLimit, recordAiUsage } from "@/lib/ai/usage";
 
 const SYSTEM = `You are Bud. You are the student's study buddy and companion inside UNIBUD. You are part of a real internal system, but never expose internal agents, routing, providers, or notes.
 
@@ -127,6 +129,10 @@ async function runAsk(
   if (now - last < 2500) return { ok: false, error: "Give Bud a second — that just went out.", conversationId };
   inflight.set(dupKey, now);
 
+  if ((await aiCallsToday(sql, userId, "bud")) >= dailyAiLimit()) {
+    return { ok: false, error: AI_QUOTA_COPY, conversationId };
+  }
+
   const mediaJson = extra?.media ? JSON.stringify({ ...extra.media, status: "ready" }) : null;
   try {
     await sql`insert into bud_messages (id, user_id, role, content, conversation_id, media_json) values (${crypto.randomUUID()}, ${userId}, ${"user"}, ${prompt}, ${conversationId}, ${mediaJson})`;
@@ -150,7 +156,11 @@ async function runAsk(
     .filter((execution) => execution.status === "completed" && execution.output?.summary)
     .map((execution) => `${execution.agentId}: ${execution.output?.summary}`);
 
-  const history = (await sql`select role, content from bud_messages where user_id = ${userId} and conversation_id = ${conversationId} order by created_at desc limit 12`).reverse().map((r) => ({ role: r.role as "user" | "assistant", content: String(r.content) }));
+  const history = trimHistory(
+    (await sql`select role, content from bud_messages where user_id = ${userId} and conversation_id = ${conversationId} order by created_at desc limit 40`)
+      .reverse()
+      .map((r) => ({ role: r.role as "user" | "assistant", content: String(r.content) })),
+  );
   const profileRows = await sql`select * from student_profiles where user_id = ${userId} limit 1`;
   const courseRows = await sql`select * from courses where user_id = ${userId}`;
   const courses = courseRows.map((r) => mapCourse(r as Parameters<typeof mapCourse>[0]));
@@ -193,12 +203,21 @@ async function runAsk(
   ], { maxTokens: 500, signal: controller.signal });
   clearTimeout(timer);
 
-  const reply = result.ok ? result.text : result.error;
-  try {
-    await sql`insert into bud_messages (id, user_id, role, content, conversation_id) values (${crypto.randomUUID()}, ${userId}, ${"assistant"}, ${reply}, ${conversationId})`;
-  } catch {
-    await sql`insert into bud_messages (id, user_id, role, content, conversation_id) values (${crypto.randomUUID()}, ${userId}, ${"assistant"}, ${reply}, ${conversationId})`;
-  }
+  await recordAiUsage(sql, {
+    userId,
+    product: "bud",
+    provider: result.providerId,
+    model: result.ok ? result.model : null,
+    status: result.ok ? "ok" : "error",
+    errorCode: result.ok ? null : result.code,
+    promptTokens: result.ok ? result.usage?.promptTokens : undefined,
+    completionTokens: result.ok ? result.usage?.completionTokens : undefined,
+    totalTokens: result.ok ? result.usage?.totalTokens : undefined,
+    latencyMs: result.latencyMs ?? 0,
+  });
+
+  // A failure is not a reply: never store text the model did not produce.
   if (!result.ok) return { ok: false, error: result.error, conversationId };
-  return { ok: true, text: reply, conversationId };
+  await sql`insert into bud_messages (id, user_id, role, content, conversation_id) values (${crypto.randomUUID()}, ${userId}, ${"assistant"}, ${result.text}, ${conversationId})`;
+  return { ok: true, text: result.text, conversationId };
 }
