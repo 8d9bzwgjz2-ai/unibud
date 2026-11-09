@@ -398,6 +398,16 @@ changes).
 - **Migrations run through `scripts/migrate.mjs`** during `npm run build` and in
   the one-shot `migrate` Compose service. It reads `migrations/` non-recursively,
   so `migrations/auth/0001_auth.sql` (the schema source) is never applied twice.
+- **A new migration needs a manual apply in an already-running sandbox.** The
+  `migrate` service only runs when the stack boots and the dev server never
+  builds, so after adding `migrations/*.sql` run
+  `docker compose -f docker-compose.base44.yml exec -T app node scripts/migrate.mjs`.
+  A missing table makes optional runtime paths (such as the `ai_usage` ledger)
+  fail silently.
+- **AI features go through `src/lib/ai/gateway.ts`.** `generateAi()` owns the
+  request timeout and the `ai_usage` write; `aiQuotaError()` runs before a
+  feature persists the user's turn. Bud and Riff both use it — a new AI feature
+  must not call `getAIProvider()` directly, and a component never may.
 
 ### Verifying a change
 

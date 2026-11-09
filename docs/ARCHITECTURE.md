@@ -24,6 +24,26 @@ A specialist without a connected handler is explicitly skipped. The system must 
 - Database access is centralized through the database resolver.
 - No secrets belong in source control.
 
+## AI integration layer
+
+Every AI feature reaches the model through one server-side path:
+
+- `src/lib/ai/oracle-arc.ts` — the HTTP transport to Oracle Arc (Oracle Arc is a
+  separate service; UNIBUD never calls a model provider from the browser).
+- `src/lib/ai/provider.ts` — the provider adapter. `getAIProvider()` resolves
+  Oracle Arc, an explicitly enabled fallback, or an honest "not configured"
+  provider. Providers are capability-aware and replaceable.
+- `src/lib/ai/gateway.ts` — `generateAi()`. One bounded timeout, one failure
+  mapping, and one usage ledger write per call. An empty completion is a
+  failure, never a reply.
+- `src/lib/ai/usage.ts` — the `ai_usage` ledger and per-user daily quotas.
+  `aiQuotaError()` runs before a feature persists the user's turn.
+
+Bud (`src/lib/bud/server.ts`) and Riff (`src/lib/riff/ai.ts`) both use this
+layer; a new AI feature must do the same rather than call a provider itself.
+Without Oracle Arc credentials the layer reports `not-configured` and nothing is
+sent anywhere.
+
 ## Codespaces
 
 The repository now contains a dedicated `.devcontainer/devcontainer.json` so GitHub Codespaces use Node 22, install the locked dependencies, and forward the UNIBUD development ports.

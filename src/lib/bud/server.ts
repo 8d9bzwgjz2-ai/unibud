@@ -4,7 +4,6 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { mapBud, mapConversation, mapCourse, mapProfile } from "@/lib/unibud/map";
 import { formatStudentContext } from "./context";
 import { queryOracleLayer } from "./oracle-layer";
-import { getAIProvider } from "./provider";
 import { buildBudBrief, type AtlasSnap } from "./brief";
 import { advanceMilestone, parseMilestone } from "./milestones";
 import { communicationInstruction } from "./communication";
@@ -13,7 +12,7 @@ import { createActivitySink } from "@/lib/agents/activity";
 import { executeSpecialists } from "@/lib/agents/runtime";
 import type { AgentInput } from "@/lib/agents/contracts";
 import { trimHistory } from "@/lib/ai/context";
-import { AI_QUOTA_COPY, aiCallsToday, dailyAiLimit, recordAiUsage } from "@/lib/ai/usage";
+import { aiQuotaError, generateAi } from "@/lib/ai/gateway";
 
 const SYSTEM = `You are Bud. You are the student's study buddy and companion inside UNIBUD. You are part of a real internal system, but never expose internal agents, routing, providers, or notes.
 
@@ -129,9 +128,8 @@ async function runAsk(
   if (now - last < 2500) return { ok: false, error: "Give Bud a second — that just went out.", conversationId };
   inflight.set(dupKey, now);
 
-  if ((await aiCallsToday(sql, userId, "bud")) >= dailyAiLimit()) {
-    return { ok: false, error: AI_QUOTA_COPY, conversationId };
-  }
+  const quotaError = await aiQuotaError(sql, userId, "bud");
+  if (quotaError) return { ok: false, error: quotaError, conversationId };
 
   const mediaJson = extra?.media ? JSON.stringify({ ...extra.media, status: "ready" }) : null;
   try {
@@ -188,32 +186,21 @@ async function runAsk(
   const communication = communicationInstruction(prompt);
   const executionLine = executionNotes.length ? `Real completed internal work:\n${executionNotes.join("\n")}` : "No specialist capability completed work for this request.";
 
-  const provider = getAIProvider();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 22_000);
-  const result = await provider.complete([
-    { role: "system", content: SYSTEM },
-    { role: "system", content: contextLine },
-    { role: "system", content: brief },
-    { role: "system", content: sparkNotes },
-    { role: "system", content: communication },
-    { role: "system", content: executionLine },
-    ...(oracleLine ? [{ role: "system" as const, content: oracleLine }] : []),
-    ...history,
-  ], { maxTokens: 500, signal: controller.signal });
-  clearTimeout(timer);
-
-  await recordAiUsage(sql, {
+  const result = await generateAi({
+    sql,
     userId,
     product: "bud",
-    provider: result.providerId,
-    model: result.ok ? result.model : null,
-    status: result.ok ? "ok" : "error",
-    errorCode: result.ok ? null : result.code,
-    promptTokens: result.ok ? result.usage?.promptTokens : undefined,
-    completionTokens: result.ok ? result.usage?.completionTokens : undefined,
-    totalTokens: result.ok ? result.usage?.totalTokens : undefined,
-    latencyMs: result.latencyMs ?? 0,
+    messages: [
+      { role: "system", content: SYSTEM },
+      { role: "system", content: contextLine },
+      { role: "system", content: brief },
+      { role: "system", content: sparkNotes },
+      { role: "system", content: communication },
+      { role: "system", content: executionLine },
+      ...(oracleLine ? [{ role: "system" as const, content: oracleLine }] : []),
+      ...history,
+    ],
+    maxTokens: 500,
   });
 
   // A failure is not a reply: never store text the model did not produce.

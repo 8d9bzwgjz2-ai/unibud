@@ -5,9 +5,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
-import { getAIProvider } from "@/lib/bud/provider";
 import { trimHistory } from "@/lib/ai/context";
-import { AI_QUOTA_COPY, aiCallsToday, dailyAiLimit, recordAiUsage } from "@/lib/ai/usage";
+import { aiQuotaError, generateAi } from "@/lib/ai/gateway";
 
 export const RIFF_MODES = ["polish", "angle", "reply"] as const;
 export type RiffAssistMode = (typeof RIFF_MODES)[number];
@@ -36,39 +35,25 @@ export const riffAssist = createServerFn({ method: "POST" })
     if (!draft) return { ok: false, error: "Write something first, then ask for help shaping it." };
 
     const sql = await getSql();
-    if ((await aiCallsToday(sql, context.userId, "riff")) >= dailyAiLimit()) {
-      return { ok: false, error: AI_QUOTA_COPY };
-    }
+    const quotaError = await aiQuotaError(sql, context.userId, "riff");
+    if (quotaError) return { ok: false, error: quotaError };
 
     const thread = (Array.isArray(data.thread) ? data.thread : []).map((line) => clean(line, 280)).filter(Boolean).slice(-6);
 
-    const provider = getAIProvider();
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20_000);
-    const result = await provider.complete(
-      [
+    const result = await generateAi({
+      sql,
+      userId: context.userId,
+      product: "riff",
+      messages: [
         { role: "system", content: SYSTEM },
         { role: "system", content: `Mode: ${mode}.` },
         ...trimHistory(thread.map((content) => ({ role: "user" as const, content })), { maxChars: 2_000 }),
         { role: "user", content: draft },
       ],
-      { maxTokens: 220, signal: controller.signal },
-    );
-    clearTimeout(timer);
-
-    await recordAiUsage(sql, {
-      userId: context.userId,
-      product: "riff",
-      provider: result.providerId,
-      model: result.ok ? result.model : null,
-      status: result.ok ? "ok" : "error",
-      errorCode: result.ok ? null : result.code,
-      promptTokens: result.ok ? result.usage?.promptTokens : undefined,
-      completionTokens: result.ok ? result.usage?.completionTokens : undefined,
-      totalTokens: result.ok ? result.usage?.totalTokens : undefined,
-      latencyMs: result.latencyMs ?? 0,
+      maxTokens: 220,
+      timeoutMs: 20_000,
     });
 
     if (!result.ok) return { ok: false, error: result.error };
-    return { ok: true, text: result.text.trim() };
+    return { ok: true, text: result.text };
   });
